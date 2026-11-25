@@ -5,6 +5,7 @@ import type {
   ElsewhereRun,
 } from "../types/workflow-elsewhere.mts";
 import type {
+  ParsedDefaultBranchRuns,
   RawDefaultBranchRunsResponse,
   RawElsewhereSuite,
 } from "../types/workflow-elsewhere-raw.mts";
@@ -23,9 +24,10 @@ export const NON_DEFAULT_BRANCH_EVENTS = new Set([
 
 /** Collapse newlines and whitespace and bound an annotation message for single-line display. */
 export function normalizeAnnotationMessage(raw: string | null | undefined): string {
-  const collapsed = (raw ?? "").replace(/\s+/g, " ").trim();
-  if (collapsed.length <= MAX_ANNOTATION_MESSAGE_CHARS) return collapsed;
-  return `${collapsed.slice(0, MAX_ANNOTATION_MESSAGE_CHARS - 1)}…`;
+  const s = (raw ?? "").replace(/\s+/g, " ").trim();
+  return s.length <= MAX_ANNOTATION_MESSAGE_CHARS
+    ? s
+    : `${s.slice(0, MAX_ANNOTATION_MESSAGE_CHARS - 1)}…`;
 }
 
 /** Remove null annotation entries in place and report whether any were present. */
@@ -48,23 +50,22 @@ export function stripNullAnnotations(suites: Array<RawElsewhereSuite | null> | u
 /** Extract failed/timed-out check runs and up to 3 annotations per job from one GraphQL suite. */
 export function mapFailedJobs(suite: RawElsewhereSuite | undefined): ElsewhereFailedJob[] {
   const failed = (suite?.checkRuns?.nodes ?? []).filter((run) => {
-    const conclusion = run?.conclusion?.toUpperCase() ?? "";
-    return conclusion === "FAILURE" || conclusion === "TIMED_OUT";
+    const c = run?.conclusion?.toUpperCase() ?? "";
+    return c === "FAILURE" || c === "TIMED_OUT";
   });
   return failed.slice(0, MAX_ELSEWHERE_FAILED_JOBS).map((run) => {
     const annotations: ElsewhereAnnotation[] = (run!.annotations?.nodes ?? [])
       .slice(0, MAX_ELSEWHERE_ANNOTATIONS)
-      .map((ann) => {
-        const rawLine = ann!.location?.start?.line;
-        const line = typeof rawLine === "number" && rawLine > 0 ? rawLine : null;
-        return {
-          path: (ann!.path ?? "").trim(),
-          line,
-          message: normalizeAnnotationMessage(ann!.message),
-        };
-      });
+      .map((ann) => ({
+        path: (ann!.path ?? "").trim(),
+        line:
+          typeof ann!.location?.start?.line === "number" && ann!.location.start.line > 0
+            ? ann!.location.start.line
+            : null,
+        message: normalizeAnnotationMessage(ann!.message),
+      }));
     const total = run!.annotations?.totalCount;
-    const moreAnnotations =
+    const more =
       typeof total === "number" && total > annotations.length
         ? total - annotations.length
         : undefined;
@@ -72,7 +73,7 @@ export function mapFailedJobs(suite: RawElsewhereSuite | undefined): ElsewhereFa
       name: run!.name,
       conclusion: run!.conclusion!.toUpperCase(),
       annotations,
-      ...(moreAnnotations !== undefined && { moreAnnotations }),
+      ...(more !== undefined && { moreAnnotations: more }),
     };
   });
 }
@@ -87,21 +88,18 @@ export function sortNewestFirst<T extends { completedAt: string; runId: string }
 
 function suiteUpdatedInWindow(suite: RawElsewhereSuite | null, windowStartMs: number): boolean {
   const ts = suite?.workflowRun?.updatedAt ?? suite?.updatedAt;
-  if (!ts) return false;
-  const ms = Date.parse(ts);
+  const ms = ts ? Date.parse(ts) : Number.NaN;
   return Number.isFinite(ms) && ms >= windowStartMs;
 }
 
-export interface ParsedDefaultBranchRuns {
-  runs: ElsewhereRun[];
-  incomplete: boolean;
-  unavailable?: string;
-  branch?: string;
-  commitsRead: number;
-  matched: number;
-  workflowName?: string;
-  workflowPath?: string;
-}
+const emptyDefaultResult = (extra: Partial<ParsedDefaultBranchRuns>): ParsedDefaultBranchRuns => ({
+  runs: [],
+  incomplete: false,
+  commitsRead: 0,
+  matched: 0,
+  matchedComplete: false,
+  ...extra,
+});
 
 export function parseDefaultBranchRuns(
   data: RawDefaultBranchRunsResponse,
@@ -113,17 +111,12 @@ export function parseDefaultBranchRuns(
   const history = defaultRef?.target?.history;
   const commits = history?.nodes;
   if (!defaultRef?.name || !Array.isArray(commits)) {
-    return {
-      runs: [],
-      incomplete: false,
-      unavailable: "default branch history unavailable",
-      commitsRead: 0,
-      matched: 0,
-    };
+    return emptyDefaultResult({ unavailable: "default branch history unavailable" });
   }
   const nullAnnotations = commits.some((c) => stripNullAnnotations(c?.checkSuites?.nodes));
-  if (unread || nullAnnotations)
-    return { runs: [], incomplete: true, commitsRead: commits.length, matched: 0 };
+  if (unread || nullAnnotations) {
+    return emptyDefaultResult({ incomplete: true, commitsRead: commits.length });
+  }
 
   const targetId = Number(workflowId);
   const byRunId = new Map<string, ElsewhereRun>();
@@ -167,34 +160,34 @@ export function parseDefaultBranchRuns(
       truncatedSuites = true;
     }
   }
-  const truncatedHistory = Boolean(history?.pageInfo?.hasNextPage) && lastCommitInWindow;
-  if ((truncatedSuites || truncatedHistory) && byRunId.size < MAX_ELSEWHERE_RUNS_PER_SOURCE) {
-    return {
-      runs: [],
-      incomplete: false,
+  const truncated =
+    truncatedSuites || (Boolean(history?.pageInfo?.hasNextPage) && lastCommitInWindow);
+  if (truncated && byRunId.size < MAX_ELSEWHERE_RUNS_PER_SOURCE) {
+    return emptyDefaultResult({
       unavailable: "default branch workflow history truncated",
       branch: defaultRef.name,
       commitsRead: commits.length,
       matched: byRunId.size,
-    };
+    });
   }
   return {
+    ...emptyDefaultResult({
+      branch: defaultRef.name,
+      commitsRead: commits.length,
+      matched: byRunId.size,
+      matchedComplete: !truncated,
+    }),
     runs: sortNewestFirst([...byRunId.values()]).slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE),
-    incomplete: false,
-    branch: defaultRef.name,
-    commitsRead: commits.length,
-    matched: byRunId.size,
     ...(workflowName !== undefined && { workflowName }),
     ...(workflowPath !== undefined && { workflowPath }),
   };
 }
 
-/** Mark exact-name job matches on a copy of the workflow's elsewhere runs. */
 export function stampSameJob(runs: readonly ElsewhereRun[], checkName: string): ElsewhereRun[] {
   return runs.map((run) => ({
     ...run,
-    failedJobs: run.failedJobs.map((job) =>
-      job.name === checkName ? { ...job, sameJob: true as const } : { ...job },
+    failedJobs: run.failedJobs.map((j) =>
+      j.name === checkName ? { ...j, sameJob: true as const } : { ...j },
     ),
   }));
 }

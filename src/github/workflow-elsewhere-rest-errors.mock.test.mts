@@ -111,6 +111,31 @@ describe("workflow-elsewhere-rest errors and pagination", () => {
     });
     const rerunRes = await runRest();
     expect("runs" in rerunRes && rerunRes.runs.map((r) => r.runId)).toEqual(["909"]);
+    expect("scope" in rerunRes && rerunRes.scope.mergeQueue.matchedComplete).toBe(true);
+
+    // Page 1 alone fills the 3-candidate target on a full page -> matchedComplete is false.
+    mockRest.mockImplementation((_m: string, p: string) => {
+      if (p === "/repos/owner/repo") return Promise.resolve({ default_branch: "main" });
+      if (p.includes("branch=main")) return Promise.resolve({ workflow_runs: [] });
+      return Promise.resolve({
+        workflow_runs: Array.from({ length: 30 }, (_, i) => ({
+          id: 500 + i,
+          head_sha: `sha${i}`,
+          head_branch: `gh-readonly-queue/main/pr-${700 + i}-aaa`,
+          event: "merge_group",
+          status: "completed",
+          conclusion: "success",
+          created_at: "2024-05-15T14:00:00Z",
+        })),
+      });
+    });
+    const earlyStop = await runRest();
+    expect("scope" in earlyStop && earlyStop.scope.mergeQueue).toEqual({
+      runsRead: 30,
+      matched: 30,
+      matchedComplete: false,
+      shown: 3,
+    });
 
     // Exhausting all 3 pages before reading one page past the cutoff reports truncation.
     mockRest.mockImplementation((_m: string, p: string) => {

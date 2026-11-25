@@ -164,11 +164,13 @@ export async function readWorkflowElsewhereRest(
       branch,
       runsRead: defaultRead.runsRead,
       matched: defaultRead.matched,
+      matchedComplete: defaultRead.matchedComplete,
       shown: defaultRead.candidates.length,
     },
     mergeQueue: {
       runsRead: queueRead.runsRead,
       matched: queueRead.matched,
+      matchedComplete: queueRead.matchedComplete,
       shown: queueRead.candidates.length,
     },
   };

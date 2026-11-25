@@ -115,8 +115,14 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
         workflowName: "CI",
         workflowPath: ".github/workflows/ci.yml",
         since: "2024-05-15T11:30:00Z",
-        defaultBranch: { branch: "main", commitsRead: 1, matched: 1, shown: 1 },
-        mergeQueue: { runsRead: 1, matched: 1, shown: 1 },
+        defaultBranch: {
+          branch: "main",
+          commitsRead: 1,
+          matched: 1,
+          matchedComplete: true,
+          shown: 1,
+        },
+        mergeQueue: { runsRead: 1, matched: 1, matchedComplete: true, shown: 1 },
       },
       runs: [
         {

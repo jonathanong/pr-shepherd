@@ -162,11 +162,13 @@ export async function readWorkflowElsewhere(
       branch: defaultParsed.branch!,
       commitsRead: defaultParsed.commitsRead,
       matched: defaultParsed.matched,
+      matchedComplete: defaultParsed.matchedComplete,
       shown: defaultParsed.runs.length,
     },
     mergeQueue: {
       runsRead: queueRead.runsRead,
       matched: queueRead.matched,
+      matchedComplete: queueRead.matchedComplete,
       shown: queueParsed.runs.length,
     },
   };

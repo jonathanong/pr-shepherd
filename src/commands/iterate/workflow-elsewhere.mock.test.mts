@@ -103,8 +103,14 @@ describe("attachWorkflowElsewhere", () => {
       workflowName: "CI",
       workflowPath: ".github/workflows/ci.yml",
       since: "2024-05-15T12:50:00Z",
-      defaultBranch: { branch: "main", commitsRead: 20, matched: 1, shown: 1 },
-      mergeQueue: { runsRead: 5, matched: 0, shown: 0 },
+      defaultBranch: {
+        branch: "main",
+        commitsRead: 20,
+        matched: 1,
+        matchedComplete: true,
+        shown: 1,
+      },
+      mergeQueue: { runsRead: 5, matched: 0, matchedComplete: true, shown: 0 },
     };
     mockReadWorkflowElsewhere.mockResolvedValueOnce({
       scope,
@@ -169,8 +175,14 @@ describe("attachWorkflowElsewhere", () => {
       runs: [],
       scope: {
         since: "2024-05-15T12:50:00Z",
-        defaultBranch: { branch: "main", commitsRead: 0, matched: 0, shown: 0 },
-        mergeQueue: { runsRead: 0, matched: 0, shown: 0 },
+        defaultBranch: {
+          branch: "main",
+          commitsRead: 0,
+          matched: 0,
+          matchedComplete: true,
+          shown: 0,
+        },
+        mergeQueue: { runsRead: 0, matched: 0, matchedComplete: true, shown: 0 },
       },
     });
     const second = await attachWorkflowElsewhere({

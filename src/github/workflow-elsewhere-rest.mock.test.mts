@@ -100,8 +100,14 @@ describe("workflow-elsewhere-rest", () => {
         workflowName: "CI",
         workflowPath: ".github/workflows/ci.yml",
         since: "2024-05-15T11:30:00Z",
-        defaultBranch: { branch: "main", runsRead: 2, matched: 2, shown: 2 },
-        mergeQueue: { runsRead: 1, matched: 1, shown: 1 },
+        defaultBranch: {
+          branch: "main",
+          runsRead: 2,
+          matched: 2,
+          matchedComplete: true,
+          shown: 2,
+        },
+        mergeQueue: { runsRead: 1, matched: 1, matchedComplete: true, shown: 1 },
       },
       runs: [
         {

@@ -44,6 +44,7 @@ export async function fetchRestWorkflowRunsPaged(
   | {
       candidates: RestRunCandidate[];
       matched: number;
+      matchedComplete: boolean;
       runsRead: number;
       workflowName?: string;
       workflowPath?: string;
@@ -63,8 +64,15 @@ export async function fetchRestWorkflowRunsPaged(
     const items = payload.workflow_runs;
     all.push(...items);
     const { candidates, matched } = select(all);
-    if (items.length < REST_RUNS_PER_PAGE || candidates.length >= targetCount || sawPreWindowPage) {
-      return { candidates, matched, runsRead: all.length, ...extractRestWorkflowMeta(all) };
+    const reachedEnd = items.length < REST_RUNS_PER_PAGE || sawPreWindowPage;
+    if (reachedEnd || candidates.length >= targetCount) {
+      return {
+        candidates,
+        matched,
+        matchedComplete: reachedEnd,
+        runsRead: all.length,
+        ...extractRestWorkflowMeta(all),
+      };
     }
     const oldestCreatedMs = Date.parse(items[items.length - 1]!.created_at);
     if (Number.isFinite(oldestCreatedMs) && oldestCreatedMs < windowStartMs) {

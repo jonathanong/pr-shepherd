@@ -88,7 +88,9 @@ function formatCheckedLine(scope: ElsewhereScope, indent: string): string {
 function formatShowingLine(scope: ElsewhereScope, indent: string): string {
   const branch = `\`${sanitizeInline(scope.defaultBranch.branch)}\``;
   const { defaultBranch: def, mergeQueue: mq } = scope;
-  return `${indent}  showing newest ${def.shown} of ${def.matched} on ${branch}, ${mq.shown} of ${mq.matched} in the merge queue`;
+  const defMatched = `${def.matched}${def.matchedComplete ? "" : "+"}`;
+  const mqMatched = `${mq.matched}${mq.matchedComplete ? "" : "+"}`;
+  return `${indent}  showing newest ${def.shown} of ${defMatched} on ${branch}, ${mq.shown} of ${mqMatched} in the merge queue`;
 }
 
 /** Render the `Same workflow elsewhere` sub-lines for a failing merge-group Actions check. */

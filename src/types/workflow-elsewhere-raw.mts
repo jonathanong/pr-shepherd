@@ -1,4 +1,18 @@
+import type { ElsewhereRun } from "./workflow-elsewhere.mts";
+
 /** Raw GitHub GraphQL and REST shapes for merge-queue workflow-elsewhere comparisons. */
+
+export interface ParsedDefaultBranchRuns {
+  runs: ElsewhereRun[];
+  incomplete: boolean;
+  unavailable?: string;
+  branch?: string;
+  commitsRead: number;
+  matched: number;
+  matchedComplete: boolean;
+  workflowName?: string;
+  workflowPath?: string;
+}
 
 interface RawElsewhereAnnotation {
   path?: string | null;

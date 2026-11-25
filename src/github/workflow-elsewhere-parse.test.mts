@@ -81,12 +81,34 @@ describe("parseDefaultBranchRuns", () => {
       WINDOW_START,
     );
     expect(res.incomplete).toBe(false);
-    expect([res.commitsRead, res.matched, res.workflowName, res.workflowPath]).toEqual([
-      1,
-      4,
-      "CI",
-      ".github/workflows/ci.yml",
-    ]);
+    expect([
+      res.commitsRead,
+      res.matched,
+      res.matchedComplete,
+      res.workflowName,
+      res.workflowPath,
+    ]).toEqual([1, 4, true, "CI", ".github/workflows/ci.yml"]);
+    const cappedWithMore = parseDefaultBranchRuns(
+      historyResp(
+        [
+          {
+            oid: "1111111aaaa",
+            committedDate: "2024-05-15T13:00:00Z",
+            checkSuites: {
+              nodes: [
+                suite(14, "2024-05-15T14:00:00Z", "SUCCESS"),
+                suite(15, "2024-05-15T15:00:00Z"),
+                suite(16, "2024-05-15T15:00:00Z"),
+              ],
+            },
+          },
+        ],
+        { hasNextPage: true },
+      ) as never,
+      "7001",
+      WINDOW_START,
+    );
+    expect([cappedWithMore.matched, cappedWithMore.matchedComplete]).toEqual([3, false]);
     expect(res.runs.map((r) => r.runId)).toEqual(["16", "15", "14"]);
     expect([res.runs[0]!.headSha, res.runs[0]!.branch, res.runs[0]!.failedJobs.length]).toEqual([
       "1111111",

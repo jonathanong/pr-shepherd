@@ -29,11 +29,15 @@ export interface ElsewhereScope {
     /** Default-branch workflow runs read (REST transport). */
     runsRead?: number;
     matched: number;
+    /** False when the read stopped before reaching the window start, so `matched` is a lower bound. */
+    matchedComplete: boolean;
     shown: number;
   };
   mergeQueue: {
     runsRead: number;
     matched: number;
+    /** False when the read stopped before reaching the window start, so `matched` is a lower bound. */
+    matchedComplete: boolean;
     shown: number;
   };
 }

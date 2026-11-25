@@ -11,73 +11,93 @@ const baseCheck = (): AgentCheck => ({
   commitOid: "q1",
 });
 
+const defSrc = (
+  over: Partial<ElsewhereScope["defaultBranch"]> = {},
+): ElsewhereScope["defaultBranch"] => ({
+  branch: "main",
+  commitsRead: 20,
+  matched: 7,
+  matchedComplete: true,
+  shown: 3,
+  ...over,
+});
+const mqSrc = (over: Partial<ElsewhereScope["mergeQueue"]> = {}): ElsewhereScope["mergeQueue"] => ({
+  runsRead: 90,
+  matched: 2,
+  matchedComplete: true,
+  shown: 2,
+  ...over,
+});
 const sampleScope = (overrides: Partial<ElsewhereScope> = {}): ElsewhereScope => ({
   workflowName: "CI",
   workflowPath: ".github/workflows/ci.yml",
   since: "2024-05-15T09:10:00Z",
-  defaultBranch: { branch: "main", commitsRead: 20, matched: 7, shown: 3 },
-  mergeQueue: { runsRead: 90, matched: 2, shown: 2 },
+  defaultBranch: defSrc(),
+  mergeQueue: mqSrc(),
   ...overrides,
 });
 
-describe("renderWorkflowElsewhereLines", () => {
-  it("returns empty when neither elsewhere nor elsewhereUnread is set", () => {
-    expect(renderWorkflowElsewhereLines(baseCheck())).toEqual([]);
-  });
+const mkRun = (
+  over: Partial<NonNullable<AgentCheck["elsewhere"]>[number]>,
+): NonNullable<AgentCheck["elsewhere"]>[number] => ({
+  source: "default-branch",
+  headSha: "9f8e7d6",
+  runId: "1",
+  conclusion: "SUCCESS",
+  completedAt: "2024-05-15T14:00:00Z",
+  failedJobs: [],
+  ...over,
+});
 
-  it("renders the unread state unchanged", () => {
+describe("renderWorkflowElsewhereLines", () => {
+  it("returns empty when unset and renders unread unchanged", () => {
+    expect(renderWorkflowElsewhereLines(baseCheck())).toEqual([]);
     expect(
       renderWorkflowElsewhereLines({ ...baseCheck(), elsewhereUnread: "HTTP 502\nretry" }),
     ).toEqual(["  Same workflow elsewhere: not read (HTTP 502 retry)"]);
   });
 
-  it("renders the none-found state with workflow scope and checked counts (GraphQL and REST)", () => {
+  it("renders none-found with workflow scope and checked counts (GraphQL and REST)", () => {
+    const empty = (scope: ElsewhereScope) =>
+      renderWorkflowElsewhereLines({ ...baseCheck(), elsewhere: [], elsewhereScope: scope });
     expect(
-      renderWorkflowElsewhereLines({
-        ...baseCheck(),
-        elsewhere: [],
-        elsewhereScope: sampleScope({
-          defaultBranch: { branch: "main", commitsRead: 20, matched: 0, shown: 0 },
-          mergeQueue: { runsRead: 1, matched: 0, shown: 0 },
+      empty(
+        sampleScope({
+          defaultBranch: defSrc({ matched: 0, shown: 0 }),
+          mergeQueue: mqSrc({ runsRead: 1, matched: 0, shown: 0 }),
         }),
-      }),
+      ),
     ).toEqual([
       "  Same workflow elsewhere — `CI` (.github/workflows/ci.yml), since 09:10Z: none found",
       "    checked: `main` last 20 commits · merge queue newest 1 run",
     ]);
-
     expect(
-      renderWorkflowElsewhereLines({
-        ...baseCheck(),
-        elsewhere: [],
-        elsewhereScope: sampleScope({
+      empty(
+        sampleScope({
           workflowPath: undefined,
-          defaultBranch: { branch: "main", runsRead: 1, matched: 0, shown: 0 },
-          mergeQueue: { runsRead: 30, matched: 0, shown: 0 },
+          defaultBranch: defSrc({ commitsRead: undefined, runsRead: 1, matched: 0, shown: 0 }),
+          mergeQueue: mqSrc({ runsRead: 30, matched: 0, shown: 0 }),
         }),
-      }),
+      ),
     ).toEqual([
       "  Same workflow elsewhere — `CI`, since 09:10Z: none found",
       "    checked: `main` newest 1 run · merge queue newest 30 runs",
     ]);
-
     expect(
-      renderWorkflowElsewhereLines({
-        ...baseCheck(),
-        elsewhere: [],
-        elsewhereScope: sampleScope({
+      empty(
+        sampleScope({
           workflowName: undefined,
-          defaultBranch: { branch: "main", commitsRead: 1, matched: 0, shown: 0 },
-          mergeQueue: { runsRead: 0, matched: 0, shown: 0 },
+          defaultBranch: defSrc({ commitsRead: 1, matched: 0, shown: 0 }),
+          mergeQueue: mqSrc({ runsRead: 0, matched: 0, shown: 0 }),
         }),
-      }),
+      ),
     ).toEqual([
       "  Same workflow elsewhere — (.github/workflows/ci.yml), since 09:10Z: none found",
       "    checked: `main` last 1 commit · merge queue newest 0 runs",
     ]);
   });
 
-  it("renders scope, runs, failed jobs, sameJob, and (+N more annotations) across 0/1/multi annotations", () => {
+  it("renders scope, runs, failed jobs, sameJob, and (+N more annotations)", () => {
     const lines = renderWorkflowElsewhereLines({
       ...baseCheck(),
       elsewhereScope: sampleScope(),
@@ -120,31 +140,15 @@ describe("renderWorkflowElsewhereLines", () => {
             },
           ],
         },
-        {
-          source: "default-branch",
-          headSha: "9f8e7d6",
-          runId: "45389870021",
-          conclusion: "SUCCESS",
-          completedAt: "2024-05-15T14:00:00Z",
-          failedJobs: [],
-        },
-        {
+        mkRun({ runId: "45389870021" }),
+        mkRun({
           source: "merge-queue",
           pr: 812,
           headSha: "f00ba12",
           runId: "45390098877",
           conclusion: "FAILURE",
-          completedAt: "2024-05-15T14:58:00Z",
-          failedJobs: [],
-        },
-        {
-          source: "merge-queue",
-          headSha: "0001112",
-          runId: "45390090000",
-          conclusion: "SUCCESS",
-          completedAt: "2024-05-15T14:30:00Z",
-          failedJobs: [],
-        },
+        }),
+        mkRun({ source: "merge-queue", headSha: "0001112", runId: "45390090000" }),
       ],
     });
     expect(lines).toEqual([
@@ -164,23 +168,31 @@ describe("renderWorkflowElsewhereLines", () => {
     ]);
   });
 
-  it("handles missing scope or non-ISO timestamps gracefully", () => {
+  it("appends + when matchedComplete is false and handles missing/custom scope", () => {
+    const partial = renderWorkflowElsewhereLines({
+      ...baseCheck(),
+      elsewhereScope: sampleScope({
+        defaultBranch: defSrc({ matched: 3, matchedComplete: false, shown: 3 }),
+        mergeQueue: mqSrc({ runsRead: 30, matched: 4, matchedComplete: false, shown: 3 }),
+      }),
+      elsewhere: [mkRun({ branch: "main", headSha: "a1b2c3d" })],
+    });
+    expect(partial[2]).toBe("    showing newest 3 of 3+ on `main`, 3 of 4+ in the merge queue");
     expect(renderWorkflowElsewhereLines({ ...baseCheck(), elsewhere: [] })).toEqual([
       "  Same workflow elsewhere, since unknown: none found",
     ]);
-    expect(
-      renderWorkflowElsewhereLines({
-        ...baseCheck(),
-        elsewhere: [],
-        elsewhereScope: sampleScope({
-          workflowName: undefined,
-          workflowPath: undefined,
-          since: "custom",
-          defaultBranch: { branch: "main", matched: 0, shown: 0 },
-          mergeQueue: { runsRead: 0, matched: 0, shown: 0 },
-        }),
+    const custom = renderWorkflowElsewhereLines({
+      ...baseCheck(),
+      elsewhere: [],
+      elsewhereScope: sampleScope({
+        workflowName: undefined,
+        workflowPath: undefined,
+        since: "custom",
+        defaultBranch: defSrc({ commitsRead: undefined, matched: 0, shown: 0 }),
+        mergeQueue: mqSrc({ runsRead: 0, matched: 0, shown: 0 }),
       }),
-    ).toEqual([
+    });
+    expect(custom).toEqual([
       "  Same workflow elsewhere, since custom: none found",
       "    checked: `main` newest 0 runs · merge queue newest 0 runs",
     ]);

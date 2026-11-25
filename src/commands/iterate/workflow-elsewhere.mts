@@ -52,7 +52,9 @@ function isFreshCached(value: unknown, nowMs: number): value is CachedElsewhere 
     Array.isArray(e.runs) &&
     typeof e.scope?.since === "string" &&
     typeof e.scope?.defaultBranch?.branch === "string" &&
+    typeof e.scope?.defaultBranch?.matchedComplete === "boolean" &&
     typeof e.scope?.mergeQueue?.runsRead === "number" &&
+    typeof e.scope?.mergeQueue?.matchedComplete === "boolean" &&
     typeof e.cachedAtMs === "number" &&
     nowMs - e.cachedAtMs >= 0 &&
     nowMs - e.cachedAtMs < ELSEWHERE_CACHE_TTL_MS,
