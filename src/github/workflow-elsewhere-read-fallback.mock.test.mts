@@ -28,7 +28,11 @@ const emptyHistory = {
 };
 
 describe("workflow-elsewhere-read transport isolation", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    return () => vi.unstubAllEnvs();
+  });
 
   it("keeps GraphQL session transport when the REST queue-run listing fails with 5xx", async () => {
     mockGraphql.mockResolvedValueOnce(emptyHistory);
