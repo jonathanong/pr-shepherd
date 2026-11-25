@@ -10,11 +10,17 @@ Merge queue: No [Required]
 - `45390112233` — `CI › test (3/4)` [conclusion: FAILURE] [scope: merge_group, commit: queue-commit-1]
   > Run tests
   > Error: expected 3 retries, got 2
-  Same workflow elsewhere (since 12:50Z, newest first):
+  Same workflow elsewhere — `CI` (.github/workflows/ci.yml), since 12:50Z:
+    checked: `main` last 2 commits · merge queue newest 2 runs
+    showing newest 2 of 2 on `main`, 1 of 1 in the merge queue
   - merge queue #812 `f00ba12` run `45390098877` [conclusion: FAILURE]
     - test (1/4): `src/db/pool.test.mts:12` — connect ETIMEDOUT
   - `main` `a1b2c3d` run `45390004411` [conclusion: FAILURE]
-    - test (2/4): `src/queue/retry.test.mts:88` — expected 3 retries, got 2
+    - test (2/4):
+      - `src/queue/retry.test.mts:88` — expected 3 retries, got 2
+      - `src/queue/retry.test.mts:104` — timed out waiting for retry
+      - `src/queue/retry.test.mts:120` — unexpected exit code 1
+      - (+2 more annotations)
     - test (3/4) [conclusion: TIMED_OUT] ← same job
   - `main` `9f8e7d6` run `45389870021` [conclusion: SUCCESS]
 

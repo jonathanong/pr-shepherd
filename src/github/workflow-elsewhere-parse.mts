@@ -1,3 +1,4 @@
+import { normalizeWorkflowPath } from "../checks/workflow-path.mts";
 import type {
   ElsewhereAnnotation,
   ElsewhereFailedJob,
@@ -62,17 +63,26 @@ export function mapFailedJobs(suite: RawElsewhereSuite | undefined): ElsewhereFa
           message: normalizeAnnotationMessage(ann!.message),
         };
       });
-    return { name: run!.name, conclusion: run!.conclusion!.toUpperCase(), annotations };
+    const total = run!.annotations?.totalCount;
+    const moreAnnotations =
+      typeof total === "number" && total > annotations.length
+        ? total - annotations.length
+        : undefined;
+    return {
+      name: run!.name,
+      conclusion: run!.conclusion!.toUpperCase(),
+      annotations,
+      ...(moreAnnotations !== undefined && { moreAnnotations }),
+    };
   });
 }
 
 /** Sort runs newest-first by completion timestamp, breaking ties by numeric run ID descending. */
 export function sortNewestFirst<T extends { completedAt: string; runId: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) => {
-    const timeDiff = Date.parse(b.completedAt) - Date.parse(a.completedAt);
-    if (timeDiff !== 0) return timeDiff;
-    return Number(b.runId) - Number(a.runId);
-  });
+  return [...items].sort(
+    (a, b) =>
+      Date.parse(b.completedAt) - Date.parse(a.completedAt) || Number(b.runId) - Number(a.runId),
+  );
 }
 
 function suiteUpdatedInWindow(suite: RawElsewhereSuite | null, windowStartMs: number): boolean {
@@ -82,33 +92,45 @@ function suiteUpdatedInWindow(suite: RawElsewhereSuite | null, windowStartMs: nu
   return Number.isFinite(ms) && ms >= windowStartMs;
 }
 
-/**
- * Parse default-branch workflow runs from GraphQL history. Returns `incomplete: true` when any
- * connection contained a `null` node, or `unavailable` when default-branch history was absent or
- * truncated before establishing the window's top runs.
- */
+export interface ParsedDefaultBranchRuns {
+  runs: ElsewhereRun[];
+  incomplete: boolean;
+  unavailable?: string;
+  branch?: string;
+  commitsRead: number;
+  matched: number;
+  workflowName?: string;
+  workflowPath?: string;
+}
+
 export function parseDefaultBranchRuns(
   data: RawDefaultBranchRunsResponse,
   workflowId: string,
   windowStartMs: number,
-): { runs: ElsewhereRun[]; incomplete: boolean; unavailable?: string } {
+): ParsedDefaultBranchRuns {
   const unread = dropNullNodes(data);
   const defaultRef = data.repository?.defaultBranchRef;
   const history = defaultRef?.target?.history;
   const commits = history?.nodes;
   if (!defaultRef?.name || !Array.isArray(commits)) {
-    return { runs: [], incomplete: false, unavailable: "default branch history unavailable" };
+    return {
+      runs: [],
+      incomplete: false,
+      unavailable: "default branch history unavailable",
+      commitsRead: 0,
+      matched: 0,
+    };
   }
-  let nullAnnotations = false;
-  for (const commit of commits) {
-    if (stripNullAnnotations(commit?.checkSuites?.nodes)) nullAnnotations = true;
-  }
-  if (unread || nullAnnotations) return { runs: [], incomplete: true };
+  const nullAnnotations = commits.some((c) => stripNullAnnotations(c?.checkSuites?.nodes));
+  if (unread || nullAnnotations)
+    return { runs: [], incomplete: true, commitsRead: commits.length, matched: 0 };
 
   const targetId = Number(workflowId);
   const byRunId = new Map<string, ElsewhereRun>();
   let truncatedSuites = false;
   let lastCommitInWindow = false;
+  let workflowName: string | undefined;
+  let workflowPath: string | undefined;
   for (const commit of commits) {
     let matchedOnCommit = false;
     let hasInWindowSuite = false;
@@ -116,6 +138,8 @@ export function parseDefaultBranchRuns(
       if (suiteUpdatedInWindow(suite, windowStartMs)) hasInWindowSuite = true;
       const wfRun = suite!.workflowRun;
       if (!wfRun || wfRun.workflow?.databaseId !== targetId) continue;
+      if (!workflowName && wfRun.workflow.name?.trim()) workflowName = wfRun.workflow.name.trim();
+      if (!workflowPath) workflowPath = normalizeWorkflowPath(wfRun.file?.path);
       if (wfRun.databaseId == null || !Number.isSafeInteger(wfRun.databaseId)) continue;
       if (suite!.branch?.name && suite!.branch.name !== defaultRef.name) continue;
       if (wfRun.event && NON_DEFAULT_BRANCH_EVENTS.has(wfRun.event)) continue;
@@ -137,10 +161,9 @@ export function parseDefaultBranchRuns(
       });
     }
     const commitMs = Date.parse(commit!.committedDate);
-    const commitInWindow =
+    lastCommitInWindow =
       hasInWindowSuite || !Number.isFinite(commitMs) || commitMs >= windowStartMs;
-    lastCommitInWindow = commitInWindow;
-    if (commitInWindow && commit!.checkSuites?.pageInfo?.hasNextPage && !matchedOnCommit) {
+    if (lastCommitInWindow && commit!.checkSuites?.pageInfo?.hasNextPage && !matchedOnCommit) {
       truncatedSuites = true;
     }
   }
@@ -150,11 +173,19 @@ export function parseDefaultBranchRuns(
       runs: [],
       incomplete: false,
       unavailable: "default branch workflow history truncated",
+      branch: defaultRef.name,
+      commitsRead: commits.length,
+      matched: byRunId.size,
     };
   }
   return {
     runs: sortNewestFirst([...byRunId.values()]).slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE),
     incomplete: false,
+    branch: defaultRef.name,
+    commitsRead: commits.length,
+    matched: byRunId.size,
+    ...(workflowName !== undefined && { workflowName }),
+    ...(workflowPath !== undefined && { workflowPath }),
   };
 }
 

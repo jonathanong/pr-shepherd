@@ -38,7 +38,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "triage.checks[].detailsUrl",
     "a GitHub Actions check shows only its run ID; a URL is printed only for an external (no-runId) check",
   ],
-  ["triage.checks[].elsewhereSince", "ISO 8601 window start; text renders short HH:MMZ"],
+  ["triage.checks[].elsewhereScope.since", "ISO 8601 window start; text renders short HH:MMZ"],
   ["triage.checks[].elsewhere[].source", "rendered as branch name or `merge queue [#N]`"],
   ["triage.checks[].elsewhere[].completedAt", "ISO timestamp for ordering; omitted from run line"],
   [

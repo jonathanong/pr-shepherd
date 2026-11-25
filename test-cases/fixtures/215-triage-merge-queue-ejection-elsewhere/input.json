@@ -37,6 +37,8 @@
   },
   "workflowElsewhere": {
     "defaultBranch": "main",
+    "workflowName": "CI",
+    "workflowPath": ".github/workflows/ci.yml",
     "defaultBranchRuns": [
       {
         "oid": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
@@ -49,11 +51,22 @@
           {
             "name": "test (2/4)",
             "conclusion": "FAILURE",
+            "annotationsTotal": 5,
             "annotations": [
               {
                 "path": "src/queue/retry.test.mts",
                 "line": 88,
                 "message": "expected 3 retries, got 2"
+              },
+              {
+                "path": "src/queue/retry.test.mts",
+                "line": 104,
+                "message": "timed out waiting for retry"
+              },
+              {
+                "path": "src/queue/retry.test.mts",
+                "line": 120,
+                "message": "unexpected exit code 1"
               }
             ]
           },

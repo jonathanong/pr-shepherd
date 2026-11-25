@@ -9,7 +9,8 @@ Merge queue: No [Required]
 
 - `37106358227` — `CI › tests` [conclusion: FAILURE] [scope: merge_group, commit: queue-commit-1]
   > OpenRouter HTTP 529: provider temporarily unavailable
-  Same workflow elsewhere: no other runs since 12:50Z
+  Same workflow elsewhere — `CI`, since 12:50Z: none found
+    checked: `main` last 0 commits · merge queue newest 0 runs
 
 ## Instructions
 

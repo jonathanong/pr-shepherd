@@ -5,6 +5,7 @@ import type {
   ElsewhereAnnotation,
   ElsewhereFailedJob,
   ElsewhereRun,
+  ElsewhereScope,
 } from "../types/workflow-elsewhere.mts";
 import {
   MAX_ELSEWHERE_ANNOTATIONS,
@@ -17,25 +18,19 @@ import {
   selectDefaultBranchRestRuns,
   selectOtherQueueRestRuns,
 } from "./workflow-elsewhere-queue.mts";
-import type { RestRunCandidate, RestWorkflowRunItem } from "../types/workflow-elsewhere-raw.mts";
+import { fetchRestWorkflowRunsPaged } from "./workflow-elsewhere-rest-runs.mts";
+import type { RestRunCandidate } from "../types/workflow-elsewhere-raw.mts";
 import type {
   ReadWorkflowElsewhereInput,
   WorkflowElsewhereReadResult,
 } from "./workflow-elsewhere-read.mts";
 
-const REST_RUNS_PER_PAGE = 30;
-const MAX_RUN_PAGES = 3;
 const REST_JOBS_PER_PAGE = 100;
 const MAX_JOB_PAGES = 3;
-
-interface RestRunsPayload {
-  workflow_runs?: RestWorkflowRunItem[];
-}
 
 interface RestJobsPayload {
   jobs?: Array<{ id: number; name: string; conclusion: string | null }>;
 }
-
 interface RestAnnotationItem {
   path?: string | null;
   start_line?: number | null;
@@ -44,43 +39,6 @@ interface RestAnnotationItem {
 
 const repoPrefix = (repo: RepoInfo): string =>
   `/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
-
-/**
- * Page REST workflow runs up to `MAX_RUN_PAGES` until `targetCount` candidates are found, a page
- * is partial, or one full page past the `created_at < windowStartMs` cutoff has been read (so
- * re-runs of older runs completing inside the window are seen). Returns `unread` if the budget
- * exhausts before that condition is met.
- */
-export async function fetchRestWorkflowRunsPaged(
-  baseQuery: string,
-  windowStartMs: number,
-  select: (items: readonly RestWorkflowRunItem[]) => RestRunCandidate[],
-  targetCount: number,
-): Promise<{ candidates: RestRunCandidate[] } | { unread: string }> {
-  const all: RestWorkflowRunItem[] = [];
-  let sawPreWindowPage = false;
-  for (let page = 1; page <= MAX_RUN_PAGES; page++) {
-    // eslint-disable-next-line no-await-in-loop
-    const payload = await rest<RestRunsPayload>(
-      "GET",
-      `${baseQuery}&per_page=${REST_RUNS_PER_PAGE}&page=${page}`,
-    );
-    if (!Array.isArray(payload?.workflow_runs))
-      return { unread: "malformed workflow runs response" };
-    const items = payload.workflow_runs;
-    all.push(...items);
-    const candidates = select(all);
-    if (items.length < REST_RUNS_PER_PAGE || candidates.length >= targetCount)
-      return { candidates };
-    if (sawPreWindowPage) return { candidates };
-    const oldest = items[items.length - 1]!;
-    const oldestCreatedMs = Date.parse(oldest.created_at);
-    if (Number.isFinite(oldestCreatedMs) && oldestCreatedMs < windowStartMs) {
-      sawPreWindowPage = true;
-    }
-  }
-  return { unread: "workflow runs pagination truncated" };
-}
 
 async function hydrateRestFailedJobs(
   repo: RepoInfo,
@@ -112,7 +70,7 @@ async function hydrateRestFailedJobs(
     async (job): Promise<ElsewhereFailedJob | { unread: string }> => {
       const rawAnnotations = await rest<unknown>(
         "GET",
-        `${repoPrefix(repo)}/check-runs/${job.id}/annotations?per_page=${MAX_ELSEWHERE_ANNOTATIONS}`,
+        `${repoPrefix(repo)}/check-runs/${job.id}/annotations?per_page=100`,
       );
       if (!Array.isArray(rawAnnotations)) {
         return { unread: "malformed check-run annotations response" };
@@ -124,12 +82,20 @@ async function hydrateRestFailedJobs(
           line: typeof ann.start_line === "number" && ann.start_line > 0 ? ann.start_line : null,
           message: normalizeAnnotationMessage(ann.message),
         }));
-      return { name: job.name, conclusion: job.conclusion, annotations };
+      const moreAnnotations =
+        rawAnnotations.length > MAX_ELSEWHERE_ANNOTATIONS
+          ? rawAnnotations.length - MAX_ELSEWHERE_ANNOTATIONS
+          : undefined;
+      return {
+        name: job.name,
+        conclusion: job.conclusion,
+        annotations,
+        ...(moreAnnotations !== undefined && { moreAnnotations }),
+      };
     },
   );
   const bad = hydrated.find((item): item is { unread: string } => "unread" in item);
-  if (bad) return bad;
-  return { jobs: hydrated as ElsewhereFailedJob[] };
+  return bad ? bad : { jobs: hydrated as ElsewhereFailedJob[] };
 }
 
 /** REST transport reader for same-workflow runs on the default branch and other queue entries. */
@@ -188,5 +154,23 @@ export async function readWorkflowElsewhereRest(
   ];
   const bad = results.find((item): item is { unread: string } => "unread" in item);
   if (bad) return bad;
-  return { runs: sortNewestFirst(results as ElsewhereRun[]), since };
+  const workflowName = defaultRead.workflowName ?? queueRead.workflowName ?? input.workflowName;
+  const workflowPath = defaultRead.workflowPath ?? queueRead.workflowPath ?? input.workflowPath;
+  const scope: ElsewhereScope = {
+    ...(workflowName !== undefined && { workflowName }),
+    ...(workflowPath !== undefined && { workflowPath }),
+    since,
+    defaultBranch: {
+      branch,
+      runsRead: defaultRead.runsRead,
+      matched: defaultRead.matched,
+      shown: defaultRead.candidates.length,
+    },
+    mergeQueue: {
+      runsRead: queueRead.runsRead,
+      matched: queueRead.matched,
+      shown: queueRead.candidates.length,
+    },
+  };
+  return { runs: sortNewestFirst(results as ElsewhereRun[]), scope };
 }

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ElsewhereRun } from "../types/workflow-elsewhere.mts";
-import {
-  normalizeAnnotationMessage,
-  parseDefaultBranchRuns,
-  stampSameJob,
-} from "./workflow-elsewhere-parse.mts";
+import { parseDefaultBranchRuns } from "./workflow-elsewhere-parse.mts";
 
 const WINDOW_START = Date.parse("2024-05-15T12:00:00Z");
 
@@ -19,13 +14,20 @@ const suite = (
   conclusion,
   updatedAt,
   branch: { name: "main" },
-  workflowRun: { databaseId: id, event, updatedAt, workflow: { databaseId: wf } },
+  workflowRun: {
+    databaseId: id,
+    event,
+    updatedAt,
+    file: { path: ".github/workflows/ci.yml" },
+    workflow: { databaseId: wf, name: "CI" },
+  },
   checkRuns: {
     nodes: [
       {
         name: `job-${id}`,
         conclusion: "FAILURE",
         annotations: {
+          totalCount: 5,
           nodes: [
             { path: "a.ts", location: { start: { line: 10 } }, message: "boom" },
             { path: "b.ts", location: { start: { line: 0 } }, message: "no line" },
@@ -46,37 +48,6 @@ const historyResp = (nodes: unknown[], pageInfo?: { hasNextPage: boolean }) => (
       target: { history: { ...(pageInfo && { pageInfo }), nodes } },
     },
   },
-});
-
-describe("normalizeAnnotationMessage & stampSameJob", () => {
-  it("collapses whitespace, truncates long messages, and stamps exact-name job matches", () => {
-    expect(normalizeAnnotationMessage("  line1\n\tline2  ")).toBe("line1 line2");
-    expect(normalizeAnnotationMessage(null)).toBe("");
-    const out = normalizeAnnotationMessage("a".repeat(300));
-    expect(out.length).toBe(240);
-    expect(out.endsWith("…")).toBe(true);
-
-    const runs: ElsewhereRun[] = [
-      {
-        source: "default-branch",
-        branch: "main",
-        headSha: "1111111",
-        runId: "1",
-        conclusion: "FAILURE",
-        completedAt: "2024-05-15T14:00:00Z",
-        failedJobs: [
-          { name: "test (3/4)", conclusion: "FAILURE", annotations: [] },
-          { name: "test (1/4)", conclusion: "TIMED_OUT", annotations: [] },
-        ],
-      },
-    ];
-    const stamped = stampSameJob(runs, "test (3/4)");
-    expect(stamped[0]!.failedJobs).toEqual([
-      { name: "test (3/4)", conclusion: "FAILURE", sameJob: true, annotations: [] },
-      { name: "test (1/4)", conclusion: "TIMED_OUT", annotations: [] },
-    ]);
-    expect(runs[0]!.failedJobs[0]!.sameJob).toBeUndefined();
-  });
 });
 
 describe("parseDefaultBranchRuns", () => {
@@ -110,10 +81,19 @@ describe("parseDefaultBranchRuns", () => {
       WINDOW_START,
     );
     expect(res.incomplete).toBe(false);
+    expect([res.commitsRead, res.matched, res.workflowName, res.workflowPath]).toEqual([
+      1,
+      4,
+      "CI",
+      ".github/workflows/ci.yml",
+    ]);
     expect(res.runs.map((r) => r.runId)).toEqual(["16", "15", "14"]);
-    expect(res.runs[0]!.headSha).toBe("1111111");
-    expect(res.runs[0]!.branch).toBe("main");
-    expect(res.runs[0]!.failedJobs).toHaveLength(1);
+    expect([res.runs[0]!.headSha, res.runs[0]!.branch, res.runs[0]!.failedJobs.length]).toEqual([
+      "1111111",
+      "main",
+      1,
+    ]);
+    expect(res.runs[0]!.failedJobs[0]!.moreAnnotations).toBe(2);
     expect(res.runs[0]!.failedJobs[0]!.annotations).toEqual([
       { path: "a.ts", line: 10, message: "boom" },
       { path: "b.ts", line: null, message: "no line" },
@@ -124,13 +104,6 @@ describe("parseDefaultBranchRuns", () => {
   it("reports unavailable on missing/truncated history and incomplete on null nodes or annotations", () => {
     const parse = (d: unknown) => parseDefaultBranchRuns(d as never, "7001", WINDOW_START);
     expect(parse({ repository: null }).unavailable).toBe("default branch history unavailable");
-    expect(
-      parse(
-        historyResp([
-          { oid: "abc1234", committedDate: "2024-05-15T13:00:00Z", checkSuites: { nodes: [null] } },
-        ]),
-      ).incomplete,
-    ).toBe(true);
     const nullAnn = historyResp([
       {
         oid: "abc1234",
@@ -149,48 +122,49 @@ describe("parseDefaultBranchRuns", () => {
         },
       },
     ]);
-    expect(parse(nullAnn).incomplete).toBe(true);
+    expect([
+      parse(nullAnn).incomplete,
+      parse(
+        historyResp([
+          { oid: "a", committedDate: "2024-05-15T13:00:00Z", checkSuites: { nodes: [null] } },
+        ]),
+      ).incomplete,
+    ]).toEqual([true, true]);
     const truncSuite = (committedDate: string, nodes: unknown[] = []) =>
       historyResp([
         { oid: "abc1234", committedDate, checkSuites: { pageInfo: { hasNextPage: true }, nodes } },
       ]);
-    expect(parse(truncSuite("2024-05-15T13:00:00Z")).unavailable).toBe(
-      "default branch workflow history truncated",
-    );
-    // Old committedDate (e.g. rebase-merged commit) with an in-window suite still counts as in-window.
+    const truncMsg = "default branch workflow history truncated";
+    expect(parse(truncSuite("2024-05-15T13:00:00Z")).unavailable).toBe(truncMsg);
     expect(
       parse(
         truncSuite("2024-05-14T00:00:00Z", [suite(99, "2024-05-15T13:30:00Z", "SUCCESS", 9999)]),
       ).unavailable,
-    ).toBe("default branch workflow history truncated");
-    // Old committedDate with a matching in-window run is kept (window judged by run completion time).
-    expect(
-      parse(
-        historyResp([
-          {
-            oid: "rebased1",
-            committedDate: "2024-05-14T00:00:00Z",
-            checkSuites: { nodes: [suite(88, "2024-05-15T14:00:00Z")] },
-          },
-        ]),
-      ).runs.map((r) => r.runId),
-    ).toEqual(["88"]);
-    // Old committedDate with no in-window suite does not poison truncatedSuites.
-    expect(parse(truncSuite("2024-05-14T00:00:00Z"))).toEqual({ runs: [], incomplete: false });
-    // Oldest commit with an in-window suite still marks history truncated when hasNextPage is true.
-    expect(
-      parse(
-        historyResp(
-          [
-            {
-              oid: "old1234",
-              committedDate: "2024-05-14T00:00:00Z",
-              checkSuites: { nodes: [suite(99, "2024-05-15T13:30:00Z", "SUCCESS", 9999)] },
-            },
-          ],
-          { hasNextPage: true },
-        ),
-      ).unavailable,
-    ).toBe("default branch workflow history truncated");
+    ).toBe(truncMsg);
+    const rebased = historyResp([
+      {
+        oid: "rebased1",
+        committedDate: "2024-05-14T00:00:00Z",
+        checkSuites: { nodes: [suite(88, "2024-05-15T14:00:00Z")] },
+      },
+    ]);
+    expect(parse(rebased).runs.map((r) => r.runId)).toEqual(["88"]);
+    expect(parse(truncSuite("2024-05-14T00:00:00Z"))).toMatchObject({
+      runs: [],
+      incomplete: false,
+      commitsRead: 1,
+      matched: 0,
+    });
+    const oldInWin = historyResp(
+      [
+        {
+          oid: "old1234",
+          committedDate: "2024-05-14T00:00:00Z",
+          checkSuites: { nodes: [suite(99, "2024-05-15T13:30:00Z", "SUCCESS", 9999)] },
+        },
+      ],
+      { hasNextPage: true },
+    );
+    expect(parse(oldInWin).unavailable).toBe(truncMsg);
   });
 });

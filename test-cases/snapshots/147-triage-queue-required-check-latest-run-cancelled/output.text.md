@@ -10,7 +10,8 @@ Merge queue: No [Required]
 ## Failing checks
 
 - `200` — `web › web` [conclusion: CANCELLED] [scope: merge_group, commit: queue-commit-1]
-  Same workflow elsewhere: no other runs since 12:50Z
+  Same workflow elsewhere — `web`, since 12:50Z: none found
+    checked: `main` last 0 commits · merge queue newest 0 runs
 
 ## Instructions
 

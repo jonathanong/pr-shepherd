@@ -34,8 +34,8 @@ function validRunAttempt(attempt: number | null | undefined): number | undefined
 export function selectOtherQueueRestRuns(
   runs: readonly RestWorkflowRunItem[],
   opts: { prNumber: number; currentRunId: string; currentCommitOid: string; windowStartMs: number },
-): RestRunCandidate[] {
-  const candidates: RestRunCandidate[] = [];
+): { candidates: RestRunCandidate[]; matched: number } {
+  const byRunId = new Map<string, RestRunCandidate>();
   for (const run of runs) {
     if (run.status !== "completed" || !run.conclusion) continue;
     const runId = String(run.id);
@@ -45,8 +45,9 @@ export function selectOtherQueueRestRuns(
     const completedAt = run.updated_at ?? run.created_at;
     const completedMs = Date.parse(completedAt);
     if (!Number.isFinite(completedMs) || completedMs < opts.windowStartMs) continue;
+    if (byRunId.has(runId)) continue;
     const runAttempt = validRunAttempt(run.run_attempt);
-    candidates.push({
+    byRunId.set(runId, {
       runId,
       headSha: run.head_sha,
       ...(pr !== undefined && { pr }),
@@ -55,7 +56,11 @@ export function selectOtherQueueRestRuns(
       completedAt,
     });
   }
-  return sortNewestFirst(candidates).slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE);
+  const sorted = sortNewestFirst([...byRunId.values()]);
+  return {
+    candidates: sorted.slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE),
+    matched: sorted.length,
+  };
 }
 
 /** Filter and cap REST default-branch workflow runs to up to 3 completed entries in the window. */
@@ -63,17 +68,19 @@ export function selectDefaultBranchRestRuns(
   runs: readonly RestWorkflowRunItem[],
   branch: string,
   windowStartMs: number,
-): RestRunCandidate[] {
-  const candidates: RestRunCandidate[] = [];
+): { candidates: RestRunCandidate[]; matched: number } {
+  const byRunId = new Map<string, RestRunCandidate>();
   for (const run of runs) {
     if (run.status !== "completed" || !run.conclusion) continue;
     if (run.event && NON_DEFAULT_BRANCH_EVENTS.has(run.event)) continue;
     const completedAt = run.updated_at ?? run.created_at;
     const completedMs = Date.parse(completedAt);
     if (!Number.isFinite(completedMs) || completedMs < windowStartMs) continue;
+    const runId = String(run.id);
+    if (byRunId.has(runId)) continue;
     const runAttempt = validRunAttempt(run.run_attempt);
-    candidates.push({
-      runId: String(run.id),
+    byRunId.set(runId, {
+      runId,
       headSha: run.head_sha,
       branch,
       ...(runAttempt !== undefined && { runAttempt }),
@@ -81,7 +88,11 @@ export function selectDefaultBranchRestRuns(
       completedAt,
     });
   }
-  return sortNewestFirst(candidates).slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE);
+  const sorted = sortNewestFirst([...byRunId.values()]);
+  return {
+    candidates: sorted.slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE),
+    matched: sorted.length,
+  };
 }
 
 /** Build one aliased GraphQL query fetching failed check runs and annotations for queue commits. */
@@ -94,7 +105,7 @@ export function buildQueueCommitsQuery(
   const fields = oids
     .map(
       (_, i) =>
-        `c${i}: object(expression: $oid${i}) { ... on Commit { oid checkSuites(first: 20) { pageInfo { hasNextPage } nodes { workflowRun { databaseId } checkRuns(first: 15, filterBy: { conclusions: [FAILURE, TIMED_OUT] }) { nodes { name conclusion annotations(first: 3) { nodes { path location { start { line } } message } } } } } } } }`,
+        `c${i}: object(expression: $oid${i}) { ... on Commit { oid checkSuites(first: 20) { pageInfo { hasNextPage } nodes { workflowRun { databaseId } checkRuns(first: 15, filterBy: { conclusions: [FAILURE, TIMED_OUT] }) { nodes { name conclusion annotations(first: 3) { totalCount nodes { path location { start { line } } message } } } } } } } }`,
     )
     .join(" ");
   const query = `query QueueCommitCheckSuites($owner: String!, $repo: String!${decls}) { _shepherdRateLimit: rateLimit { cost limit nodeCount remaining resetAt used } repository(owner: $owner, name: $repo) { ${fields} } }`;

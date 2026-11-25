@@ -99,8 +99,15 @@ describe("attachWorkflowElsewhere", () => {
   it("caches per removal, fetches once per workflow across shards, and stamps per-check sameJob", async () => {
     const shard1 = makeCheck({ name: "test (1/4)" });
     const shard3 = makeCheck({ name: "test (3/4)" });
-    mockReadWorkflowElsewhere.mockResolvedValueOnce({
+    const scope = {
+      workflowName: "CI",
+      workflowPath: ".github/workflows/ci.yml",
       since: "2024-05-15T12:50:00Z",
+      defaultBranch: { branch: "main", commitsRead: 20, matched: 1, shown: 1 },
+      mergeQueue: { runsRead: 5, matched: 0, shown: 0 },
+    };
+    mockReadWorkflowElsewhere.mockResolvedValueOnce({
+      scope,
       runs: [
         {
           source: "default-branch",
@@ -113,45 +120,29 @@ describe("attachWorkflowElsewhere", () => {
         },
       ],
     });
-    const first = await attachWorkflowElsewhere({
-      checks: [shard1, shard3] as unknown as AgentCheck[],
-      rawFailing: [shard1, shard3],
-      report: REPORT,
-      repo: REPO,
-      stateKey,
-      ejectionCommit: "q1",
-      compareWindowHours: 6,
-      nowMs: 1_000_000,
-    });
+    const call = (checks: TriagedCheck[], nowMs?: number) =>
+      attachWorkflowElsewhere({
+        checks: checks as unknown as AgentCheck[],
+        rawFailing: checks,
+        report: REPORT,
+        repo: REPO,
+        stateKey,
+        ejectionCommit: "q1",
+        compareWindowHours: 6,
+        ...(nowMs !== undefined && { nowMs }),
+      });
+    const first = await call([shard1, shard3], 1_000_000);
     expect(mockReadWorkflowElsewhere).toHaveBeenCalledTimes(1);
     expect(first[0]!.elsewhere?.[0]?.failedJobs[0]?.sameJob).toBeUndefined();
     expect(first[1]!.elsewhere?.[0]?.failedJobs[0]?.sameJob).toBe(true);
+    expect(first[0]!.elsewhereScope).toEqual(scope);
 
-    const second = await attachWorkflowElsewhere({
-      checks: [shard3] as unknown as AgentCheck[],
-      rawFailing: [shard3],
-      report: REPORT,
-      repo: REPO,
-      stateKey,
-      ejectionCommit: "q1",
-      compareWindowHours: 6,
-      nowMs: 1_060_000,
-    });
+    const second = await call([shard3], 1_060_000);
     expect(mockReadWorkflowElsewhere).toHaveBeenCalledTimes(1);
     expect(second[0]!.elsewhere?.[0]?.failedJobs[0]?.sameJob).toBe(true);
 
-    // After 5-minute TTL expires, re-reads so later default-branch failures/recoveries appear.
-    mockReadWorkflowElsewhere.mockResolvedValueOnce({ runs: [], since: "2024-05-15T12:50:00Z" });
-    const expired = await attachWorkflowElsewhere({
-      checks: [shard3] as unknown as AgentCheck[],
-      rawFailing: [shard3],
-      report: REPORT,
-      repo: REPO,
-      stateKey,
-      ejectionCommit: "q1",
-      compareWindowHours: 6,
-      nowMs: 1_000_000 + 6 * 60 * 1000,
-    });
+    mockReadWorkflowElsewhere.mockResolvedValueOnce({ runs: [], scope });
+    const expired = await call([shard3], 1_000_000 + 6 * 60 * 1000);
     expect(mockReadWorkflowElsewhere).toHaveBeenCalledTimes(2);
     expect(expired[0]!.elsewhere).toEqual([]);
   });
@@ -174,7 +165,14 @@ describe("attachWorkflowElsewhere", () => {
     expect(first[0]!.elsewhereUnread).toBe("GitHub returned incomplete (null) nodes");
 
     mockResolveWorkflowId.mockResolvedValueOnce("7001");
-    mockReadWorkflowElsewhere.mockResolvedValueOnce({ runs: [], since: "2024-05-15T12:50:00Z" });
+    mockReadWorkflowElsewhere.mockResolvedValueOnce({
+      runs: [],
+      scope: {
+        since: "2024-05-15T12:50:00Z",
+        defaultBranch: { branch: "main", commitsRead: 0, matched: 0, shown: 0 },
+        mergeQueue: { runsRead: 0, matched: 0, shown: 0 },
+      },
+    });
     const second = await attachWorkflowElsewhere({
       checks: [noWf] as unknown as AgentCheck[],
       rawFailing: [noWf],

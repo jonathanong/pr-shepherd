@@ -8,71 +8,44 @@ import {
 
 const WINDOW_START = Date.parse("2024-05-15T12:00:00Z");
 
+const qItem = (
+  id: number,
+  head_sha: string,
+  head_branch: string | null,
+  created_at: string,
+  conclusion: string | null = "failure",
+  status = "completed",
+) => ({ id, head_sha, head_branch, status, conclusion, created_at });
+
 describe("selectOtherQueueRestRuns & selectDefaultBranchRestRuns", () => {
   it("parses PR numbers from standard and slashed queue branches, excludes current PR/run/commit, and caps at 3", () => {
     const out = selectOtherQueueRestRuns(
       [
-        {
-          id: 1,
-          head_sha: "q-cur",
-          head_branch: "gh-readonly-queue/main/pr-99-aaa",
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T13:00:00Z",
-          updated_at: "2024-05-15T13:00:00Z",
-        },
-        {
-          id: 2,
-          head_sha: "s2",
-          head_branch: "gh-readonly-queue/release/v2/pr-42-deadbeef",
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T13:00:00Z",
-        },
-        {
-          id: 3,
-          head_sha: "s3",
-          head_branch: "gh-readonly-queue/main/pr-80-ccc",
-          status: "in_progress",
-          conclusion: null,
-          created_at: "2024-05-15T13:00:00Z",
-        },
-        {
-          id: 4,
-          head_sha: "s4",
-          head_branch: "gh-readonly-queue/main/pr-81-ddd",
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T11:00:00Z",
-        },
-        {
-          id: 5,
-          head_sha: "s5555555",
-          head_branch: "gh-readonly-queue/release/v2/pr-82-eee",
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T13:10:00Z",
-        },
-        {
-          id: 6,
-          head_sha: "s6666666",
-          head_branch: "gh-readonly-queue/main/pr-0-abc1234",
-          status: "completed",
-          conclusion: "success",
-          created_at: "2024-05-15T14:00:00Z",
-        },
-        {
-          id: 7,
-          head_sha: "s7777777",
-          head_branch: null,
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T14:10:00Z",
-        },
+        qItem(1, "q-cur", "gh-readonly-queue/main/pr-99-aaa", "2024-05-15T13:00:00Z"),
+        qItem(2, "s2", "gh-readonly-queue/release/v2/pr-42-deadbeef", "2024-05-15T13:00:00Z"),
+        qItem(
+          3,
+          "s3",
+          "gh-readonly-queue/main/pr-80-ccc",
+          "2024-05-15T13:00:00Z",
+          null,
+          "in_progress",
+        ),
+        qItem(4, "s4", "gh-readonly-queue/main/pr-81-ddd", "2024-05-15T11:00:00Z"),
+        qItem(5, "s5555555", "gh-readonly-queue/release/v2/pr-82-eee", "2024-05-15T13:10:00Z"),
+        qItem(
+          6,
+          "s6666666",
+          "gh-readonly-queue/main/pr-0-abc1234",
+          "2024-05-15T14:00:00Z",
+          "success",
+        ),
+        qItem(7, "s7777777", null, "2024-05-15T14:10:00Z"),
       ],
       { prNumber: 42, currentRunId: "999", currentCommitOid: "q-cur", windowStartMs: WINDOW_START },
     );
-    expect(out.map((r) => [r.runId, r.pr])).toEqual([
+    expect(out.matched).toBe(3);
+    expect(out.candidates.map((r) => [r.runId, r.pr])).toEqual([
       ["7", undefined],
       ["6", undefined],
       ["5", 82],
@@ -116,7 +89,8 @@ describe("selectOtherQueueRestRuns & selectDefaultBranchRestRuns", () => {
       "main",
       WINDOW_START,
     );
-    expect(def.map((r) => r.runId)).toEqual(["2"]);
+    expect(def.matched).toBe(1);
+    expect(def.candidates.map((r) => r.runId)).toEqual(["2"]);
   });
 });
 
@@ -163,9 +137,11 @@ describe("buildQueueCommitsQuery & mergeQueueCommitDetails", () => {
         },
       },
     });
-    expect(merged.incomplete).toBe(false);
-    expect(merged.runs[0]!.failedJobs).toHaveLength(2);
-    expect(merged.runs[1]!.failedJobs).toEqual([]);
+    expect([
+      merged.incomplete,
+      merged.runs[0]!.failedJobs.length,
+      merged.runs[1]!.failedJobs,
+    ]).toEqual([false, 2, []]);
 
     const withNull = mergeQueueCommitDetails(candidates, new Map([["aaaaaaa11", "c0"]]), {
       repository: { c0: { oid: "aaaaaaa11", checkSuites: { nodes: [null] } } },
@@ -190,10 +166,10 @@ describe("buildQueueCommitsQuery & mergeQueueCommitDetails", () => {
       },
     });
     expect(withNullAnn.incomplete).toBe(true);
-
-    const missingSuite = mergeQueueCommitDetails(candidates, new Map([["aaaaaaa11", "c0"]]), {
-      repository: { c0: null },
-    });
-    expect(missingSuite.unavailable).toBe("merge-queue commit check suite unavailable");
+    expect(
+      mergeQueueCommitDetails(candidates, new Map([["aaaaaaa11", "c0"]]), {
+        repository: { c0: null },
+      }).unavailable,
+    ).toBe("merge-queue commit check suite unavailable");
   });
 });

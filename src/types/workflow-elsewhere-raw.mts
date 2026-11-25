@@ -9,7 +9,7 @@ interface RawElsewhereAnnotation {
 interface RawElsewhereCheckRun {
   name: string;
   conclusion: string | null;
-  annotations?: { nodes?: Array<RawElsewhereAnnotation | null> } | null;
+  annotations?: { totalCount?: number; nodes?: Array<RawElsewhereAnnotation | null> } | null;
 }
 
 interface RawPageInfo {
@@ -25,7 +25,8 @@ export interface RawElsewhereSuite {
     databaseId?: number | null;
     event?: string | null;
     updatedAt?: string | null;
-    workflow?: { databaseId?: number | null } | null;
+    file?: { path?: string | null } | null;
+    workflow?: { databaseId?: number | null; name?: string | null } | null;
   } | null;
   checkRuns?: { nodes?: Array<RawElsewhereCheckRun | null> } | null;
 }
@@ -66,6 +67,8 @@ export interface RawQueueCommitsResponse {
 
 export interface RestWorkflowRunItem {
   id: number;
+  name?: string | null;
+  path?: string | null;
   head_sha: string;
   head_branch?: string | null;
   event?: string | null;

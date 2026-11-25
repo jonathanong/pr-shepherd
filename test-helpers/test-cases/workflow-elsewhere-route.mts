@@ -12,7 +12,9 @@ function allRuns(cfg) {
   return [...(cfg?.defaultBranchRuns ?? []), ...(cfg?.queueRuns ?? [])];
 }
 
-function toGqlSuite(run, branchName?: string) {
+function toGqlSuite(run, branchName?: string, cfg?: Record<string, unknown>) {
+  const wfPath = run.workflowPath ?? cfg?.workflowPath;
+  const wfName = run.workflowName ?? cfg?.workflowName;
   return {
     status: "COMPLETED",
     conclusion: run.conclusion,
@@ -22,14 +24,16 @@ function toGqlSuite(run, branchName?: string) {
       databaseId: run.runId,
       event: run.event ?? (run.headBranch ? "merge_group" : "push"),
       updatedAt: run.updatedAt,
-      workflow: { databaseId: run.workflowId },
+      file: wfPath ? { path: wfPath } : null,
+      workflow: { databaseId: run.workflowId, ...(wfName ? { name: wfName } : {}) },
     },
     checkRuns: {
       nodes: (run.failedJobs ?? []).map((job) => ({
         name: job.name,
         conclusion: job.conclusion,
         annotations: {
-          nodes: (job.annotations ?? []).map((ann) => ({
+          totalCount: job.annotationsTotal ?? (job.annotations ?? []).length,
+          nodes: (job.annotations ?? []).slice(0, 3).map((ann) => ({
             path: ann.path,
             location: ann.line !== null ? { start: { line: ann.line } } : null,
             message: ann.message,
@@ -57,7 +61,7 @@ export function graphqlWorkflowElsewhere(
         committedDate: run.committedDate ?? run.updatedAt,
         checkSuites: { pageInfo: { hasNextPage: false }, nodes: [] },
       };
-      existing.checkSuites.nodes.push(toGqlSuite(run, branch));
+      existing.checkSuites.nodes.push(toGqlSuite(run, branch, cfg));
       byOid.set(run.oid, existing);
     }
     return {
@@ -85,7 +89,7 @@ export function graphqlWorkflowElsewhere(
               oid,
               checkSuites: {
                 pageInfo: { hasNextPage: false },
-                nodes: matching.map((r) => toGqlSuite(r)),
+                nodes: matching.map((r) => toGqlSuite(r, undefined, cfg)),
               },
             }
           : null;
@@ -124,6 +128,8 @@ export function restWorkflowElsewhere(
       .filter((run) => run.workflowId === wfId)
       .map((run) => ({
         id: run.runId,
+        name: run.workflowName ?? cfg?.workflowName ?? null,
+        path: run.workflowPath ?? cfg?.workflowPath ?? null,
         head_sha: run.oid,
         head_branch: run.headBranch ?? cfg?.defaultBranch ?? "main",
         event: run.event ?? (isQueue ? "merge_group" : "push"),

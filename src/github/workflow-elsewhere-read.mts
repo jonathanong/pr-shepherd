@@ -5,7 +5,7 @@ import { DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY } from "./queries.mts";
 import { githubOperation } from "./transport.mts";
 import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
 import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
-import type { ElsewhereRun } from "../types/workflow-elsewhere.mts";
+import type { ElsewhereRun, ElsewhereScope } from "../types/workflow-elsewhere.mts";
 import {
   MAX_ELSEWHERE_RUNS_PER_SOURCE,
   parseDefaultBranchRuns,
@@ -16,10 +16,8 @@ import {
   mergeQueueCommitDetails,
   selectOtherQueueRestRuns,
 } from "./workflow-elsewhere-queue.mts";
-import {
-  fetchRestWorkflowRunsPaged,
-  readWorkflowElsewhereRest,
-} from "./workflow-elsewhere-rest.mts";
+import { readWorkflowElsewhereRest } from "./workflow-elsewhere-rest.mts";
+import { fetchRestWorkflowRunsPaged } from "./workflow-elsewhere-rest-runs.mts";
 import type {
   RawDefaultBranchRunsResponse,
   RawQueueCommitsResponse,
@@ -31,6 +29,8 @@ export interface ReadWorkflowElsewhereInput {
   repo: RepoInfo;
   prNumber: number;
   workflowId: string;
+  workflowName?: string;
+  workflowPath?: string;
   currentRunId: string;
   currentCommitOid: string;
   windowStartMs: number;
@@ -38,7 +38,7 @@ export interface ReadWorkflowElsewhereInput {
 }
 
 export type WorkflowElsewhereReadResult =
-  | { runs: ElsewhereRun[]; since: string }
+  | { runs: ElsewhereRun[]; scope: ElsewhereScope }
   | { unread: string };
 
 const repoPrefix = (repo: RepoInfo): string =>
@@ -152,5 +152,23 @@ export async function readWorkflowElsewhere(
   const queueParsed = mergeQueueCommitDetails(queueCandidates, oidToAlias, queueData);
   if (queueParsed.incomplete) return { unread: "GitHub returned incomplete (null) nodes" };
   if (queueParsed.unavailable) return { unread: queueParsed.unavailable };
-  return { runs: sortNewestFirst([...defaultParsed.runs, ...queueParsed.runs]), since };
+  const workflowName = defaultParsed.workflowName ?? queueRead.workflowName ?? input.workflowName;
+  const workflowPath = defaultParsed.workflowPath ?? queueRead.workflowPath ?? input.workflowPath;
+  const scope: ElsewhereScope = {
+    ...(workflowName !== undefined && { workflowName }),
+    ...(workflowPath !== undefined && { workflowPath }),
+    since,
+    defaultBranch: {
+      branch: defaultParsed.branch!,
+      commitsRead: defaultParsed.commitsRead,
+      matched: defaultParsed.matched,
+      shown: defaultParsed.runs.length,
+    },
+    mergeQueue: {
+      runsRead: queueRead.runsRead,
+      matched: queueRead.matched,
+      shown: queueParsed.runs.length,
+    },
+  };
+  return { runs: sortNewestFirst([...defaultParsed.runs, ...queueParsed.runs]), scope };
 }

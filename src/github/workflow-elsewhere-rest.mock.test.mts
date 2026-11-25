@@ -35,6 +35,8 @@ describe("workflow-elsewhere-rest", () => {
           workflow_runs: [
             {
               id: 701,
+              name: "CI",
+              path: ".github/workflows/ci.yml@refs/heads/main",
               head_sha: "111222333",
               event: "push",
               status: "completed",
@@ -81,7 +83,12 @@ describe("workflow-elsewhere-rest", () => {
       if (path.includes("/actions/runs/703/jobs"))
         return Promise.resolve({ jobs: [{ id: 93, name: "test (1/4)", conclusion: "timed_out" }] });
       if (path.includes("/check-runs/91/annotations")) {
-        return Promise.resolve([{ path: "src/x.ts", start_line: 12, message: "bad" }]);
+        return Promise.resolve([
+          { path: "src/x.ts", start_line: 12, message: "bad" },
+          { path: "src/y.ts", start_line: 2, message: "two" },
+          { path: "src/z.ts", start_line: 3, message: "three" },
+          { path: "src/w.ts", start_line: 4, message: "four" },
+        ]);
       }
       if (path.includes("/check-runs/93/annotations")) return Promise.resolve([]);
       throw new Error(`unexpected ${path}`);
@@ -89,7 +96,13 @@ describe("workflow-elsewhere-rest", () => {
     const res = await runRest();
     expect(mockGraphql).not.toHaveBeenCalled();
     expect(res).toEqual({
-      since: "2024-05-15T11:30:00Z",
+      scope: {
+        workflowName: "CI",
+        workflowPath: ".github/workflows/ci.yml",
+        since: "2024-05-15T11:30:00Z",
+        defaultBranch: { branch: "main", runsRead: 2, matched: 2, shown: 2 },
+        mergeQueue: { runsRead: 1, matched: 1, shown: 1 },
+      },
       runs: [
         {
           source: "merge-queue",
@@ -111,7 +124,12 @@ describe("workflow-elsewhere-rest", () => {
             {
               name: "test (2/4)",
               conclusion: "FAILURE",
-              annotations: [{ path: "src/x.ts", line: 12, message: "bad" }],
+              annotations: [
+                { path: "src/x.ts", line: 12, message: "bad" },
+                { path: "src/y.ts", line: 2, message: "two" },
+                { path: "src/z.ts", line: 3, message: "three" },
+              ],
+              moreAnnotations: 1,
             },
           ],
         },

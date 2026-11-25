@@ -65,7 +65,8 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
         databaseId: 501,
         event: "push",
         updatedAt: "2024-05-15T14:05:00Z",
-        workflow: { databaseId: 7001 },
+        file: { path: ".github/workflows/ci.yml" },
+        workflow: { databaseId: 7001, name: "CI" },
       },
       checkRuns: { nodes: [] },
     };
@@ -110,7 +111,13 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
       ],
     });
     expect(await runGql()).toEqual({
-      since: "2024-05-15T11:30:00Z",
+      scope: {
+        workflowName: "CI",
+        workflowPath: ".github/workflows/ci.yml",
+        since: "2024-05-15T11:30:00Z",
+        defaultBranch: { branch: "main", commitsRead: 1, matched: 1, shown: 1 },
+        mergeQueue: { runsRead: 1, matched: 1, shown: 1 },
+      },
       runs: [
         {
           source: "merge-queue",

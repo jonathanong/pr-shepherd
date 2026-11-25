@@ -255,8 +255,8 @@ export interface AgentCheck {
   commitOid?: string;
   /** Recent completed runs of the same workflow on the default branch and other merge-queue entries. */
   elsewhere?: ElsewhereRun[];
-  /** ISO 8601 UTC start of the comparison window, present alongside `elsewhere`. */
-  elsewhereSince?: string;
+  /** Bounded-read scope metadata (workflow, window start, items checked, matched vs shown), present alongside `elsewhere`. */
+  elsewhereScope?: import("./workflow-elsewhere.mts").ElsewhereScope;
   /** Why `elsewhere` could not be read or was incomplete; omitted when `elsewhere` is present. */
   elsewhereUnread?: string;
 }

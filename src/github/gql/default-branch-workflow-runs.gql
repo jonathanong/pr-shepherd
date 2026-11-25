@@ -34,8 +34,12 @@ query DefaultBranchWorkflowRuns($owner: String!, $repo: String!) {
                     databaseId
                     event
                     updatedAt
+                    file {
+                      path
+                    }
                     workflow {
                       databaseId
+                      name
                     }
                   }
                   checkRuns(first: 15, filterBy: { conclusions: [FAILURE, TIMED_OUT] }) {
@@ -43,6 +47,7 @@ query DefaultBranchWorkflowRuns($owner: String!, $repo: String!) {
                       name
                       conclusion
                       annotations(first: 3) {
+                        totalCount
                         nodes {
                           path
                           location {

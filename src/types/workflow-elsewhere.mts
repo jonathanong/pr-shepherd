@@ -12,6 +12,30 @@ export interface ElsewhereFailedJob {
   /** True when this job's exact name matches the failing merge-group check's name. */
   sameJob?: true;
   annotations: ElsewhereAnnotation[];
+  /** Count of additional annotations beyond the shown cap; omitted when zero or unknown. */
+  moreAnnotations?: number;
+}
+
+/** Bounded-read scope for `Same workflow elsewhere` so callers see exactly what was inspected. */
+export interface ElsewhereScope {
+  workflowName?: string;
+  workflowPath?: string;
+  /** ISO 8601 UTC start of the comparison window. */
+  since: string;
+  defaultBranch: {
+    branch: string;
+    /** Default-branch commits read (GraphQL transport). */
+    commitsRead?: number;
+    /** Default-branch workflow runs read (REST transport). */
+    runsRead?: number;
+    matched: number;
+    shown: number;
+  };
+  mergeQueue: {
+    runsRead: number;
+    matched: number;
+    shown: number;
+  };
 }
 
 /** One completed run of the same workflow on the default branch or another merge-queue entry. */
