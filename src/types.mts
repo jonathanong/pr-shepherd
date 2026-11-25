@@ -17,3 +17,4 @@ export * from "./types/in-progress-run.mts";
 export * from "./types/api-usage.mts";
 export * from "./types/poll-summary.mts";
 export * from "./types/next-check.mts";
+export * from "./types/workflow-elsewhere.mts";

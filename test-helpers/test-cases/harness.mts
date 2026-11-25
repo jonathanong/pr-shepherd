@@ -16,6 +16,7 @@ import { projectBatchToRest, restBatchEnvelope } from "./rest-projection.mts";
 import { projectRawSummaryToRest, projectSummaryItemToRest } from "./rest-summary-projection.mts";
 import { restThreadRoots } from "./rest-thread-roots.mts";
 import { restRoutesForFixture, stackLayerRows } from "./rest-routes.mts";
+import { graphqlWorkflowElsewhere, restWorkflowElsewhere } from "./workflow-elsewhere-route.mts";
 
 // ---------------------------------------------------------------------------
 // Global stubs (evaluated before imports)
@@ -385,6 +386,8 @@ export interface Fixture {
   restErrorResponses?: Record<string, { status: number; body: unknown }>;
   /** Workflow file text by repo path (`.github/workflows/ci.yml`), read by the cancel-runs lookup. */
   workflowFiles?: Record<string, string>;
+  /** Same-workflow runs on the default branch and other queue entries for ejection fixtures. */
+  workflowElsewhere?: Record<string, unknown>;
   /** Sets CLAUDE_CODE_REMOTE=true for the run (a Claude Code cloud session behind the proxy). */
   claudeCodeRemote?: boolean;
   /** Extra CLI args appended after "42". */
@@ -632,6 +635,8 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
         data: { repository: { pullRequest: { state, merged: state === "MERGED" } } },
       });
     }
+    const elsewhere = graphqlWorkflowElsewhere(query, variables, fixture);
+    if (elsewhere) return Promise.resolve(elsewhere);
     return Promise.resolve({
       data: {
         repository: { pullRequests: { nodes: fixture.mergedBasePullRequests ?? [] } },
@@ -797,12 +802,18 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
       );
     });
   } else {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Headers({ "content-type": "application/json" }),
-      json: () => Promise.resolve({ data: {} }),
-      text: () => Promise.resolve('{"data":{}}'),
+    const { owner, name } = fixture.repository ?? { owner: "owner", name: "repo" };
+    const prefix = `/repos/${owner}/${name}`;
+    mockFetch.mockImplementation((url, init) => {
+      const elsewhere = restWorkflowElsewhere(init?.method ?? "GET", String(url), prefix, fixture);
+      if (elsewhere) return Promise.resolve(elsewhere);
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: () => Promise.resolve({ data: {} }),
+        text: () => Promise.resolve('{"data":{}}'),
+      });
     });
   }
 }

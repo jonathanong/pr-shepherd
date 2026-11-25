@@ -44,6 +44,7 @@ import {
   currentEjectionCommit,
   type QueueEjectionRecovery,
 } from "./queue-recovery-instructions.mts";
+import { attachWorkflowElsewhere } from "./workflow-elsewhere.mts";
 import {
   buildReleasedBlockerInstruction,
   buildReviewSubsetInstruction,
@@ -551,16 +552,28 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     acknowledgmentRecovery && !("unavailable" in acknowledgmentRecovery)
       ? acknowledgmentRecovery
       : undefined;
-  const queueEjection: QueueEjectionRecovery | undefined = !currentEjectionCommit(
-    report,
-    failingAgentChecks,
-  )
+  const ejectionCommit = currentEjectionCommit(report, failingAgentChecks);
+  const queueEjection: QueueEjectionRecovery | undefined = !ejectionCommit
     ? undefined
     : requeue
       ? "requeue"
       : queueRemovalAcknowledgment
         ? "acknowledge"
         : "none";
+  const triageChecks = ejectionCommit
+    ? [
+        ...(await attachWorkflowElsewhere({
+          checks: failingAgentChecks,
+          rawFailing: failingChecks,
+          report,
+          repo: { owner: repoOwner, name: repoName },
+          stateKey: stallKey,
+          ejectionCommit,
+          compareWindowHours: loadConfig()["merge-queue"]["compare-window-hours"],
+        })),
+        ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
+      ]
+    : checks;
   // Conflicts, a behind branch whose rerun already failed, and a queue ejection that may be
   // reproduced on the latest base all print the branch update route.
   const stackRebase =
@@ -580,7 +593,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
-    checks.filter((check) => !releasedCheckNames.has(check.name)),
+    triageChecks.filter((check) => !releasedCheckNames.has(check.name)),
     changesRequestedReviews,
     baseLookup.branch,
     resolveCommand,
@@ -707,7 +720,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       firstLookSummaries,
       editedSummaries,
       surfacedApprovals,
-      checks,
+      checks: triageChecks,
       ...(inProgressRuns.length > 0 && { inProgressRuns }),
       ...(requeue && { requeue }),
       ...(queueRemovalAcknowledgment && { queueRemovalAcknowledgment }),

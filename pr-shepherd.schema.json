@@ -331,6 +331,18 @@
       },
       "additionalProperties": false
     },
+    "merge-queue": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "compare-window-hours": {
+          "default": 6,
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
     "actions": {
       "default": {},
       "type": "object",

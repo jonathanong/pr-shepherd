@@ -19,6 +19,7 @@ Stack: 7 (layer 1/1, base main)
 
 - `37106358227` — `CI › tests` [conclusion: FAILURE] [scope: merge_group, commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]
   > OpenRouter HTTP 529: provider temporarily unavailable
+  Same workflow elsewhere: no other runs since 12:50Z
 
 ## Instructions
 
@@ -26,6 +27,6 @@ Stack: 7 (layer 1/1, base main)
 2. Fix each warranted item.
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Some checks under `## Failing checks` have no rerun Shepherd can offer. Playbook: "Check follow-up".
-5. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the stack from the latest base first: Use the repository's stack-update procedure for native stack #7 in `owner/repo`, starting at bottom open layer PR #42 and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd `stack` output and update and push affected branches using the caller's git workflow. Playbook: "Branch update". If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
+5. Triage the merge-queue ejection before any requeue. Check `Same workflow elsewhere` under `## Failing checks` for recent runs of this workflow on the default branch and other merge-queue entries. If the `**queue removal**` reason shows GitHub removed the entry itself, update the stack from the latest base first: Use the repository's stack-update procedure for native stack #7 in `owner/repo`, starting at bottom open layer PR #42 and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd `stack` output and update and push affected branches using the caller's git workflow. Playbook: "Branch update". If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
 6. If the base update or a fix changed any heads, commit the remaining changes and push every affected stack branch using the repository's stack-update procedure. If no heads changed, do not push.
 7. Rerun Shepherd now.

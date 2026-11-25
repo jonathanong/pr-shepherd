@@ -9,6 +9,7 @@ Merge queue: No [Required]
 
 - `37106358227` — `CI › tests` [conclusion: FAILURE] [scope: merge_group, commit: queue-commit-1]
   > OpenRouter HTTP 529: provider temporarily unavailable
+  Same workflow elsewhere: no other runs since 12:50Z
 
 ## Post-fix actions
 
@@ -20,6 +21,6 @@ Merge queue: No [Required]
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Some checks under `## Failing checks` have no rerun Shepherd can offer. Playbook: "Check follow-up".
-4. Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".
+4. Triage the merge-queue ejection before any requeue. Check `Same workflow elsewhere` under `## Failing checks` for recent runs of this workflow on the default branch and other merge-queue entries. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".
 5. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
 6. Rerun Shepherd now.

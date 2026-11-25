@@ -52,6 +52,7 @@ describe("GraphQL eligibility", () => {
         "check-run-annotations.gql",
         "commit-check-contexts.gql",
         "commit-check-suites.gql",
+        "default-branch-workflow-runs.gql",
         "get-pr-body.gql",
         "get-pr-head-sha.gql",
         "merged-base-pull-requests.gql",

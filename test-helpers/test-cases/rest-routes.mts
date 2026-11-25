@@ -10,6 +10,7 @@
  * pass unnoticed.
  */
 import { workflowFileRoute } from "./workflow-file-route.mts";
+import { restWorkflowElsewhere } from "./workflow-elsewhere-route.mts";
 
 export interface StackLayerRow {
   position: number;
@@ -104,26 +105,22 @@ export function restRoutesForFixture(fixture, batchData: Record<string, any>) {
     const path = parsed.pathname;
     const error = fixture.restErrorResponses?.[path];
     if (error) return json(error.body, error.status);
-    if (fixture.restResponses && path in fixture.restResponses) {
+    if (fixture.restResponses && path in fixture.restResponses)
       return json(fixture.restResponses[path]);
-    }
     if (method === "POST" && /\/actions\/runs\/\d+\/cancel$/.test(path)) {
       return fixture.cancelRunsFail
         ? new Response("Cannot cancel a workflow run that is completed", { status: 409 })
         : json({}, 202);
     }
     if (method === "POST" && path === `${prefix}/pulls/${anchor}/ccr/ready_for_review`) {
-      // REST cannot read the capability, so GitHub's response carries the fixture's denial.
       return batchData.viewerAuthorization?.viewerCanUpdate === false
         ? json({ message: "Must have push access to repository" }, 403)
         : json({ draft: false });
     }
-    if (method === "GET" && path === "/user") {
+    if (method === "GET" && path === "/user")
       return json({ message: "Resource not accessible by integration" }, 403);
-    }
-    if (method === "GET" && path.startsWith(`${prefix}/compare/`)) {
+    if (method === "GET" && path.startsWith(`${prefix}/compare/`))
       return json({ behind_by: fixture.baseBehindBy ?? 0 });
-    }
     // Branch summary read before `/protection`; consistent with the unprotected 404 below.
     const branch = path.match(new RegExp(`^${prefix}/branches/([^/]+)$`));
     if (method === "GET" && branch) {
@@ -155,14 +152,17 @@ export function restRoutesForFixture(fixture, batchData: Record<string, any>) {
     }
     const workflow = workflowFileRoute(method, path, prefix, fixture.workflowFiles);
     if (workflow) return workflow;
+    const elsewhere = restWorkflowElsewhere(method, url, prefix, fixture);
+    if (elsewhere) return elsewhere;
     if (method === "GET" && path === `${prefix}/stacks`) {
-      const member = Number(parsed.searchParams.get("pull_request"));
-      rows = stackLayerRows(batchData, member, fixture.stackTopology);
+      rows = stackLayerRows(
+        batchData,
+        Number(parsed.searchParams.get("pull_request")),
+        fixture.stackTopology,
+      );
       return json([restStack()]);
     }
-    if (method === "GET" && path === `${prefix}/stacks/${stack.number}`) {
-      return json(restStack());
-    }
+    if (method === "GET" && path === `${prefix}/stacks/${stack.number}`) return json(restStack());
     if (method === "GET" && path === `${prefix}/pulls` && parsed.searchParams.get("state")) {
       return json(
         (fixture.mergedBasePullRequests ?? []).map((pull) => ({
