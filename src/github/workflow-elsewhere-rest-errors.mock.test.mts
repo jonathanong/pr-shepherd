@@ -96,18 +96,23 @@ describe("workflow-elsewhere-rest errors and pagination", () => {
   });
 
   it("reports unread when job pagination exhausts 3 pages without closing the list", async () => {
-    mockRest.mockImplementation((_m: string, p: string) => {
-      if (p === "/repos/owner/repo") return Promise.resolve({ default_branch: "main" });
-      if (p.includes("branch=main")) return Promise.resolve({ workflow_runs: [failedMainRun] });
-      if (p.includes("event=merge_group")) return Promise.resolve({ workflow_runs: [] });
-      return Promise.resolve({
-        jobs: Array.from({ length: 100 }, (_, i) => ({
-          id: i + 1,
-          name: `ok-${i}`,
-          conclusion: "success",
-        })),
+    const mockFullJobPages = (firstConclusion: string) => {
+      mockRest.mockImplementation((_m: string, p: string) => {
+        if (p === "/repos/owner/repo") return Promise.resolve({ default_branch: "main" });
+        if (p.includes("branch=main")) return Promise.resolve({ workflow_runs: [failedMainRun] });
+        if (p.includes("event=merge_group")) return Promise.resolve({ workflow_runs: [] });
+        return Promise.resolve({
+          jobs: Array.from({ length: 100 }, (_, i) => ({
+            id: i + 1,
+            name: `job-${i}`,
+            conclusion: i === 0 && p.includes("page=1") ? firstConclusion : "success",
+          })),
+        });
       });
-    });
+    };
+    mockFullJobPages("success");
+    expect(await runRest()).toEqual({ unread: "workflow jobs pagination truncated" });
+    mockFullJobPages("failure");
     expect(await runRest()).toEqual({ unread: "workflow jobs pagination truncated" });
   });
 });

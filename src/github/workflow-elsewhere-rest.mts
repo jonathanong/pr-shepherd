@@ -99,8 +99,7 @@ async function hydrateRestFailedJobs(
     }
     if (failed.length >= MAX_ELSEWHERE_FAILED_JOBS || jobsPayload.jobs.length < REST_JOBS_PER_PAGE)
       break;
-    if (page === MAX_JOB_PAGES && failed.length === 0)
-      return { unread: "workflow jobs pagination truncated" };
+    if (page === MAX_JOB_PAGES) return { unread: "workflow jobs pagination truncated" };
   }
   const hydrated = await mapPool(
     failed,
