@@ -90,7 +90,15 @@ describe("workflow-elsewhere-rest", () => {
           { path: "src/w.ts", start_line: 4, message: "four" },
         ]);
       }
-      if (path.includes("/check-runs/93/annotations")) return Promise.resolve([]);
+      if (path.includes("/check-runs/93/annotations")) {
+        return Promise.resolve(
+          Array.from({ length: 50 }, (_, i) => ({
+            path: "src/m.ts",
+            start_line: i + 1,
+            message: `m${i}`,
+          })),
+        );
+      }
       throw new Error(`unexpected ${path}`);
     });
     const res = await runRest();
@@ -117,7 +125,17 @@ describe("workflow-elsewhere-rest", () => {
           runId: "703",
           conclusion: "TIMED_OUT",
           completedAt: "2024-05-15T14:05:00Z",
-          failedJobs: [{ name: "test (1/4)", conclusion: "TIMED_OUT", annotations: [] }],
+          failedJobs: [
+            {
+              name: "test (1/4)",
+              conclusion: "TIMED_OUT",
+              annotations: [
+                { path: "src/m.ts", line: 1, message: "m0" },
+                { path: "src/m.ts", line: 2, message: "m1" },
+                { path: "src/m.ts", line: 3, message: "m2" },
+              ],
+            },
+          ],
         },
         {
           source: "default-branch",

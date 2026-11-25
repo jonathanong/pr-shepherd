@@ -27,6 +27,7 @@ import type {
 
 const REST_JOBS_PER_PAGE = 100;
 const MAX_JOB_PAGES = 3;
+const REST_ANNOTATIONS_PER_PAGE = 50;
 
 interface RestJobsPayload {
   jobs?: Array<{ id: number; name: string; conclusion: string | null }>;
@@ -70,7 +71,7 @@ async function hydrateRestFailedJobs(
     async (job): Promise<ElsewhereFailedJob | { unread: string }> => {
       const rawAnnotations = await rest<unknown>(
         "GET",
-        `${repoPrefix(repo)}/check-runs/${job.id}/annotations?per_page=100`,
+        `${repoPrefix(repo)}/check-runs/${job.id}/annotations?per_page=${REST_ANNOTATIONS_PER_PAGE}`,
       );
       if (!Array.isArray(rawAnnotations)) {
         return { unread: "malformed check-run annotations response" };
@@ -83,7 +84,8 @@ async function hydrateRestFailedJobs(
           message: normalizeAnnotationMessage(ann.message),
         }));
       const moreAnnotations =
-        rawAnnotations.length > MAX_ELSEWHERE_ANNOTATIONS
+        rawAnnotations.length > MAX_ELSEWHERE_ANNOTATIONS &&
+        rawAnnotations.length < REST_ANNOTATIONS_PER_PAGE
           ? rawAnnotations.length - MAX_ELSEWHERE_ANNOTATIONS
           : undefined;
       return {

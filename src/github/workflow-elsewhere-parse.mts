@@ -114,7 +114,8 @@ export function parseDefaultBranchRuns(
     return emptyDefaultResult({ unavailable: "default branch history unavailable" });
   }
   const nullAnnotations = commits.some((c) => stripNullAnnotations(c?.checkSuites?.nodes));
-  if (unread || nullAnnotations) {
+  const nullSuites = commits.some((c) => c?.checkSuites === null);
+  if (unread || nullAnnotations || nullSuites) {
     return emptyDefaultResult({ incomplete: true, commitsRead: commits.length });
   }
 

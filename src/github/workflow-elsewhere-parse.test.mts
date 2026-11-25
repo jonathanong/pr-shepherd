@@ -151,7 +151,9 @@ describe("parseDefaultBranchRuns", () => {
           { oid: "a", committedDate: "2024-05-15T13:00:00Z", checkSuites: { nodes: [null] } },
         ]),
       ).incomplete,
-    ]).toEqual([true, true]);
+      parse(historyResp([{ oid: "b", committedDate: "2024-05-15T13:00:00Z", checkSuites: null }]))
+        .incomplete,
+    ]).toEqual([true, true, true]);
     const truncSuite = (committedDate: string, nodes: unknown[] = []) =>
       historyResp([
         { oid: "abc1234", committedDate, checkSuites: { pageInfo: { hasNextPage: true }, nodes } },
