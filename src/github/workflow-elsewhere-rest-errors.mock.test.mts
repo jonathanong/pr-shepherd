@@ -70,7 +70,7 @@ describe("workflow-elsewhere-rest errors and pagination", () => {
     expect(await runRest()).toEqual({ unread: "malformed check-run annotations response" });
   });
 
-  it("stops run pagination at the window edge and reports truncation when budget exhausts", async () => {
+  it("reads one page past the created_at cutoff for re-runs and reports truncation when budget exhausts", async () => {
     const ownRun = (id: number, ts: string) => ({
       id,
       head_sha: `s${id}`,
@@ -80,22 +80,49 @@ describe("workflow-elsewhere-rest errors and pagination", () => {
       conclusion: "failure",
       created_at: ts,
     });
+    // Page 1 crosses created_at < windowStartMs; page 2 is still read and picks up an older run
+    // that was re-run inside the window, then stops cleanly.
     mockRest.mockImplementation((_m: string, p: string) => {
       if (p === "/repos/owner/repo") return Promise.resolve({ default_branch: "main" });
       if (p.includes("branch=main")) return Promise.resolve({ workflow_runs: [] });
+      if (p.includes("&page=2")) {
+        return Promise.resolve({
+          workflow_runs: Array.from({ length: 30 }, (_, i) =>
+            i === 0
+              ? {
+                  id: 909,
+                  head_sha: "rerund1",
+                  head_branch: "gh-readonly-queue/main/pr-812-rerund1",
+                  event: "merge_group",
+                  status: "completed",
+                  conclusion: "success",
+                  created_at: "2024-05-15T09:00:00Z",
+                  updated_at: "2024-05-15T14:20:00Z",
+                }
+              : ownRun(i + 31, "2024-05-15T08:00:00Z"),
+          ),
+        });
+      }
       return Promise.resolve({
         workflow_runs: Array.from({ length: 30 }, (_, i) =>
           ownRun(i + 1, i === 29 ? "2024-05-15T10:00:00Z" : "2024-05-15T14:00:00Z"),
         ),
       });
     });
-    expect(await runRest()).toEqual({ runs: [], since: "2024-05-15T11:30:00Z" });
+    const rerunRes = await runRest();
+    expect("runs" in rerunRes && rerunRes.runs.map((r) => r.runId)).toEqual(["909"]);
 
+    // Exhausting all 3 pages before reading one page past the cutoff reports truncation.
     mockRest.mockImplementation((_m: string, p: string) => {
       if (p === "/repos/owner/repo") return Promise.resolve({ default_branch: "main" });
       if (p.includes("branch=main")) return Promise.resolve({ workflow_runs: [] });
       return Promise.resolve({
-        workflow_runs: Array.from({ length: 30 }, (_, i) => ownRun(i + 1, "2024-05-15T14:00:00Z")),
+        workflow_runs: Array.from({ length: 30 }, (_, i) =>
+          ownRun(
+            i + 1,
+            p.includes("&page=3") && i === 29 ? "2024-05-15T10:00:00Z" : "2024-05-15T14:00:00Z",
+          ),
+        ),
       });
     });
     expect(await runRest()).toEqual({ unread: "workflow runs pagination truncated" });

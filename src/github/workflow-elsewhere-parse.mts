@@ -75,6 +75,13 @@ export function sortNewestFirst<T extends { completedAt: string; runId: string }
   });
 }
 
+function suiteUpdatedInWindow(suite: RawElsewhereSuite | null, windowStartMs: number): boolean {
+  const ts = suite?.workflowRun?.updatedAt ?? suite?.updatedAt;
+  if (!ts) return false;
+  const ms = Date.parse(ts);
+  return Number.isFinite(ms) && ms >= windowStartMs;
+}
+
 /**
  * Parse default-branch workflow runs from GraphQL history. Returns `incomplete: true` when any
  * connection contained a `null` node, or `unavailable` when default-branch history was absent or
@@ -101,9 +108,12 @@ export function parseDefaultBranchRuns(
   const targetId = Number(workflowId);
   const byRunId = new Map<string, ElsewhereRun>();
   let truncatedSuites = false;
+  let lastCommitInWindow = false;
   for (const commit of commits) {
     let matchedOnCommit = false;
+    let hasInWindowSuite = false;
     for (const suite of commit!.checkSuites?.nodes ?? []) {
+      if (suiteUpdatedInWindow(suite, windowStartMs)) hasInWindowSuite = true;
       const wfRun = suite!.workflowRun;
       if (!wfRun || wfRun.workflow?.databaseId !== targetId) continue;
       if (wfRun.databaseId == null || !Number.isSafeInteger(wfRun.databaseId)) continue;
@@ -127,16 +137,14 @@ export function parseDefaultBranchRuns(
       });
     }
     const commitMs = Date.parse(commit!.committedDate);
-    const commitInWindow = !Number.isFinite(commitMs) || commitMs >= windowStartMs;
+    const commitInWindow =
+      hasInWindowSuite || !Number.isFinite(commitMs) || commitMs >= windowStartMs;
+    lastCommitInWindow = commitInWindow;
     if (commitInWindow && commit!.checkSuites?.pageInfo?.hasNextPage && !matchedOnCommit) {
       truncatedSuites = true;
     }
   }
-  const oldestCommit = commits[commits.length - 1];
-  const truncatedHistory =
-    Boolean(history?.pageInfo?.hasNextPage) &&
-    oldestCommit !== undefined &&
-    Date.parse(oldestCommit!.committedDate) >= windowStartMs;
+  const truncatedHistory = Boolean(history?.pageInfo?.hasNextPage) && lastCommitInWindow;
   if ((truncatedSuites || truncatedHistory) && byRunId.size < MAX_ELSEWHERE_RUNS_PER_SOURCE) {
     return {
       runs: [],

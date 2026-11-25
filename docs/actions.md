@@ -711,7 +711,7 @@ Merge-group failures retain their scope, queue commit, and available log evidenc
 - No runs in window: `Same workflow elsewhere: no other runs since <HH:MMZ>` (JSON: `elsewhere: []`, `elsewhereSince`).
 - Read failed or incomplete: `Same workflow elsewhere: not read (<reason>)` (JSON: `elsewhereUnread`). Unknown is never treated as absent; ejection triage continues unchanged.
 
-GraphQL mode reads default-branch history in one GraphQL query, lists other queue runs via bounded paginated REST, and loads failed jobs and annotations for non-`SUCCESS` queue commits in one aliased GraphQL query. REST mode reads both run lists, failed jobs (bounded pagination), and up to 3 annotations per failed job via REST; any unreadable, malformed, or truncated endpoint surfaces `elsewhereUnread`.
+GraphQL mode reads default-branch history in one GraphQL query (judging each suite by its run completion time and using commit date only as a paging/truncation hint when no suite on the commit completed in the window), lists other queue runs via bounded paginated REST, and loads failed jobs and annotations for non-`SUCCESS` queue commits in one aliased GraphQL query. REST mode reads both run lists (paging up to 3 pages and reading one page past the `created_at` cutoff so re-runs of older runs inside the window are seen), failed jobs (bounded pagination), and up to 3 annotations per failed job via REST; any unreadable, malformed, or truncated endpoint surfaces `elsewhereUnread`.
 
 The `merge queue` header shows `removals on this head` when GitHub removed the current head more than once (counted from the last 10 removals since the head reached the PR, dated the same way as removal currency).
 

@@ -47,8 +47,9 @@ const repoPrefix = (repo: RepoInfo): string =>
 
 /**
  * Page REST workflow runs up to `MAX_RUN_PAGES` until `targetCount` candidates are found, a page
- * is partial, or the page reaches runs older than `windowStartMs`. Returns `unread` if the budget
- * exhausts while unread pages could still hold matching runs.
+ * is partial, or one full page past the `created_at < windowStartMs` cutoff has been read (so
+ * re-runs of older runs completing inside the window are seen). Returns `unread` if the budget
+ * exhausts before that condition is met.
  */
 export async function fetchRestWorkflowRunsPaged(
   baseQuery: string,
@@ -57,6 +58,7 @@ export async function fetchRestWorkflowRunsPaged(
   targetCount: number,
 ): Promise<{ candidates: RestRunCandidate[] } | { unread: string }> {
   const all: RestWorkflowRunItem[] = [];
+  let sawPreWindowPage = false;
   for (let page = 1; page <= MAX_RUN_PAGES; page++) {
     // eslint-disable-next-line no-await-in-loop
     const payload = await rest<RestRunsPayload>(
@@ -70,9 +72,12 @@ export async function fetchRestWorkflowRunsPaged(
     const candidates = select(all);
     if (items.length < REST_RUNS_PER_PAGE || candidates.length >= targetCount)
       return { candidates };
+    if (sawPreWindowPage) return { candidates };
     const oldest = items[items.length - 1]!;
     const oldestCreatedMs = Date.parse(oldest.created_at);
-    if (Number.isFinite(oldestCreatedMs) && oldestCreatedMs < windowStartMs) return { candidates };
+    if (Number.isFinite(oldestCreatedMs) && oldestCreatedMs < windowStartMs) {
+      sawPreWindowPage = true;
+    }
   }
   return { unread: "workflow runs pagination truncated" };
 }

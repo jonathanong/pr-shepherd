@@ -122,75 +122,75 @@ describe("parseDefaultBranchRuns", () => {
   });
 
   it("reports unavailable on missing/truncated history and incomplete on null nodes or annotations", () => {
-    expect(parseDefaultBranchRuns({ repository: null }, "7001", WINDOW_START).unavailable).toBe(
-      "default branch history unavailable",
-    );
+    const parse = (d: unknown) => parseDefaultBranchRuns(d as never, "7001", WINDOW_START);
+    expect(parse({ repository: null }).unavailable).toBe("default branch history unavailable");
     expect(
-      parseDefaultBranchRuns(
+      parse(
         historyResp([
           { oid: "abc1234", committedDate: "2024-05-15T13:00:00Z", checkSuites: { nodes: [null] } },
-        ]) as never,
-        "7001",
-        WINDOW_START,
+        ]),
       ).incomplete,
     ).toBe(true);
-    expect(
-      parseDefaultBranchRuns(
-        historyResp([
-          {
-            oid: "abc1234",
-            committedDate: "2024-05-15T13:00:00Z",
-            checkSuites: {
-              nodes: [
-                {
-                  status: "COMPLETED",
-                  conclusion: "FAILURE",
-                  workflowRun: { databaseId: 1, event: "push", workflow: { databaseId: 7001 } },
-                  checkRuns: {
-                    nodes: [{ name: "t", conclusion: "FAILURE", annotations: { nodes: [null] } }],
-                  },
-                },
-              ],
-            },
-          },
-        ]) as never,
-        "7001",
-        WINDOW_START,
-      ).incomplete,
-    ).toBe(true);
-    expect(
-      parseDefaultBranchRuns(
-        historyResp([
-          {
-            oid: "abc1234",
-            committedDate: "2024-05-15T13:00:00Z",
-            checkSuites: { pageInfo: { hasNextPage: true }, nodes: [] },
-          },
-        ]) as never,
-        "7001",
-        WINDOW_START,
-      ).unavailable,
-    ).toBe("default branch workflow history truncated");
-    expect(
-      parseDefaultBranchRuns(
-        historyResp(
-          [{ oid: "abc1234", committedDate: "2024-05-15T13:00:00Z", checkSuites: { nodes: [] } }],
-          { hasNextPage: true },
-        ) as never,
-        "7001",
-        WINDOW_START,
-      ).unavailable,
-    ).toBe("default branch workflow history truncated");
-    const preWindow = historyResp([
+    const nullAnn = historyResp([
       {
-        oid: "old1234",
-        committedDate: "2024-05-14T00:00:00Z",
-        checkSuites: { pageInfo: { hasNextPage: true }, nodes: [] },
+        oid: "abc1234",
+        committedDate: "2024-05-15T13:00:00Z",
+        checkSuites: {
+          nodes: [
+            {
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              workflowRun: { databaseId: 1, event: "push", workflow: { databaseId: 7001 } },
+              checkRuns: {
+                nodes: [{ name: "t", conclusion: "FAILURE", annotations: { nodes: [null] } }],
+              },
+            },
+          ],
+        },
       },
     ]);
-    expect(parseDefaultBranchRuns(preWindow as never, "7001", WINDOW_START)).toEqual({
-      runs: [],
-      incomplete: false,
-    });
+    expect(parse(nullAnn).incomplete).toBe(true);
+    const truncSuite = (committedDate: string, nodes: unknown[] = []) =>
+      historyResp([
+        { oid: "abc1234", committedDate, checkSuites: { pageInfo: { hasNextPage: true }, nodes } },
+      ]);
+    expect(parse(truncSuite("2024-05-15T13:00:00Z")).unavailable).toBe(
+      "default branch workflow history truncated",
+    );
+    // Old committedDate (e.g. rebase-merged commit) with an in-window suite still counts as in-window.
+    expect(
+      parse(
+        truncSuite("2024-05-14T00:00:00Z", [suite(99, "2024-05-15T13:30:00Z", "SUCCESS", 9999)]),
+      ).unavailable,
+    ).toBe("default branch workflow history truncated");
+    // Old committedDate with a matching in-window run is kept (window judged by run completion time).
+    expect(
+      parse(
+        historyResp([
+          {
+            oid: "rebased1",
+            committedDate: "2024-05-14T00:00:00Z",
+            checkSuites: { nodes: [suite(88, "2024-05-15T14:00:00Z")] },
+          },
+        ]),
+      ).runs.map((r) => r.runId),
+    ).toEqual(["88"]);
+    // Old committedDate with no in-window suite does not poison truncatedSuites.
+    expect(parse(truncSuite("2024-05-14T00:00:00Z"))).toEqual({ runs: [], incomplete: false });
+    // Oldest commit with an in-window suite still marks history truncated when hasNextPage is true.
+    expect(
+      parse(
+        historyResp(
+          [
+            {
+              oid: "old1234",
+              committedDate: "2024-05-14T00:00:00Z",
+              checkSuites: { nodes: [suite(99, "2024-05-15T13:30:00Z", "SUCCESS", 9999)] },
+            },
+          ],
+          { hasNextPage: true },
+        ),
+      ).unavailable,
+    ).toBe("default branch workflow history truncated");
   });
 });
