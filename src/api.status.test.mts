@@ -16,6 +16,7 @@ const page = { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [
 
 let stateDir: string;
 let cwd: string;
+let home: string;
 let raw: ReturnType<typeof makeRawPr>;
 
 /** A PR with finished passing CI, an approval and a clean merge state. */
@@ -104,6 +105,13 @@ const codecovComment = {
 beforeEach(() => {
   stateDir = mkdtempSync(join(tmpdir(), "shepherd-status-state-"));
   cwd = mkdtempSync(join(tmpdir(), "shepherd-status-cwd-"));
+  home = mkdtempSync(join(tmpdir(), "shepherd-status-home-"));
+  // Hermetic config: no user-level file, and the opt-in standard rules (codecov) enabled here.
+  vi.stubEnv("HOME", home);
+  writeFileSync(
+    join(cwd, ".pr-shepherdrc.yml"),
+    "version: 1\nclassify:\n  standard:\n    all: true\n",
+  );
   vi.stubEnv("PR_SHEPHERD_STATE_DIR", stateDir);
   // githubFetch also honors the lowercase proxy variables, which the wire helper does not clear.
   vi.stubEnv("http_proxy", "");
@@ -113,6 +121,7 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(stateDir, { recursive: true, force: true });
   rmSync(cwd, { recursive: true, force: true });
+  rmSync(home, { recursive: true, force: true });
 });
 
 describe("createPrShepherd().status", () => {
