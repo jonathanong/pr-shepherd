@@ -69,6 +69,7 @@ const patches = await shepherd.suggest({
 - `getJournal` requires `pr`; the other methods infer the current branch's PR when it is omitted.
 - A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than `cwd`.
 - `cwd` supplies local git state, configuration, classification rules, and per-worktree debug logging.
+- With a repository-qualified `pr`, `cwd` need not be a checkout of that repository, or a git repository at all. Shepherd then reads configuration and classification rules from `cwd` and uses the defaults where `cwd` has none, rather than the target repository's own config. Pass a checkout of the target as `cwd` when its config should apply.
 
 ### `iterate`
 
