@@ -19,6 +19,19 @@ describe("read-only HTTP backstop", () => {
     }
   });
 
+  it("refuses a mutation document that starts with GraphQL-ignored commas", () => {
+    expect(() =>
+      runReadOnly(() =>
+        assertGraphQlReadable(
+          ", ,\n mutation M { markPullRequestReadyForReview(input: {}) { __typename } }",
+        ),
+      ),
+    ).toThrow(/refused a GitHub mutation/);
+    expect(() =>
+      runReadOnly(() => assertGraphQlReadable(", query Q { viewer { login } }")),
+    ).not.toThrow();
+  });
+
   it("refuses every non-GET REST method before any request is sent", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);

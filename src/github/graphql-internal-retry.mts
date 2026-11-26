@@ -11,7 +11,8 @@ const GRAPHQL_INTERNAL_RETRY_DELAYS = [500, 1500];
 export function isGraphQlMutationDocument(document: string): boolean {
   let rest = document;
   for (;;) {
-    rest = rest.replace(/^\s+/, "");
+    // Commas are ignored tokens in GraphQL, like whitespace.
+    rest = rest.replace(/^[\s,]+/, "");
     if (rest.startsWith("#")) {
       const nl = rest.indexOf("\n");
       rest = nl === -1 ? "" : rest.slice(nl + 1);
