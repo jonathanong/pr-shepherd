@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `READY` · **merge** `UNSTABLE` · **repo** `owner/repo` · **head** `abc123`
+**status** `READY` · **merge** `UNSTABLE` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 600
 **ignored** `Kilo Code Review`
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`

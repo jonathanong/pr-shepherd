@@ -1,6 +1,6 @@
 # PR #42 [CANCEL] — ready-delay-elapsed
 
-**status** `READY` · **repo** `owner/repo` · **head** `abc123`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 

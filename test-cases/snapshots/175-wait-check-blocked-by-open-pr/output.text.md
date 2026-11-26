@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `owner/repo` · **head** `abc123`
+**status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `owner/repo`
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 
 WAIT: awaiting human review or branch protection — blocked by owner/repo#99

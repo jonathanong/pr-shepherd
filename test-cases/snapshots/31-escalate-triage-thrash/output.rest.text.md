@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo` · **head** `abc123`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 

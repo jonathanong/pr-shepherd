@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **repo** `owner/repo` · **head** `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+**status** `FAILING` · **repo** `owner/repo`
 **summary** 1 passing
 Merge queue: No [Required]
 Stack: 7 (layer 1/1, base main)

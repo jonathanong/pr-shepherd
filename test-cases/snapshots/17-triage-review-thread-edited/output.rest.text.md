@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `UNRESOLVED_COMMENTS` · **head** `abc123`
+**status** `UNRESOLVED_COMMENTS`
 **summary** 1 passing
 **transport** `rest`
 

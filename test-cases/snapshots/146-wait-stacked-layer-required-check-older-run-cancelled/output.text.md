@@ -1,6 +1,6 @@
 # PR #2687 [WAIT]
 
-**status** `READY` · **repo** `vouchington/vouchington` · **head** `cc74f59feac8909829d8cb75d9ca2c00647ac95e`
+**status** `READY` · **repo** `vouchington/vouchington`
 **summary** 3 passing, 3 superseded · **remainingSeconds** 600
 Required status checks: static, web, gitleaks [Required]
 Stack: 2688 (layer 2/2, base main)

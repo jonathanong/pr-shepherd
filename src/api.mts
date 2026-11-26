@@ -305,8 +305,10 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
   }
 
   function status(input: StatusInput = {}): Promise<IterateResult> {
-    return runInClient(input, () =>
-      runReadOnly(async () => {
+    // The read-only scope wraps the whole client run, so transport fallback probes and quota
+    // bookkeeping inside the runner are covered too.
+    return runReadOnly(() =>
+      runInClient(input, async () => {
         if (input === null || typeof input !== "object" || "prs" in input) {
           throw new PrShepherdValidationError("status takes one PR: pass pr, not prs");
         }

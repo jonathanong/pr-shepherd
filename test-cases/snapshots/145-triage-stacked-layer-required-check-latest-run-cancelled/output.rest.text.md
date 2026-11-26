@@ -1,6 +1,6 @@
 # PR #2687 [TRIAGE]
 
-**status** `FAILING` · **merge** `BLOCKED` · **repo** `vouchington/vouchington` · **head** `cc74f59feac8909829d8cb75d9ca2c00647ac95e`
+**status** `FAILING` · **merge** `BLOCKED` · **repo** `vouchington/vouchington`
 **summary** 3 passing
 **transport** `rest`
 

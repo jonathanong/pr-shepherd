@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **head** `abc123`
+**status** `FAILING`
 
 ## Failing checks
 

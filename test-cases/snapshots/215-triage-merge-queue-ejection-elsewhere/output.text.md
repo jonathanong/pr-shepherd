@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **repo** `owner/repo` · **head** `abc123`
+**status** `FAILING` · **repo** `owner/repo`
 Merge queue: No [Required]
 **merge queue** enabled `true` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`

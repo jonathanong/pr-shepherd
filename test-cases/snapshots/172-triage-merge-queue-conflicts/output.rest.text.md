@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY` · **head** `abc123`
+**status** `FAILING` · **merge** `DIRTY`
 **summary** 1 passing · **branch** conflicts with PR base `main`
 **transport** `rest`
 

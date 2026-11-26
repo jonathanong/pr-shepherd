@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY` · **head** `abc123`
+**status** `READY`
 **summary** 1 passing
 **transport** `rest`
 

@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo` · **head** `abc123`
+**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo`
 **summary** 1 passing · **branch** conflicts with PR base `main`
 Merge queue: position 2 UNMERGEABLE [Required]
 **merge queue** enabled `true` · inQueue `true` · state `UNMERGEABLE` · position `2`

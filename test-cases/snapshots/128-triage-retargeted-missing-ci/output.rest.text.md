@@ -1,6 +1,6 @@
 # PR #2099 [TRIAGE]
 
-**status** `PENDING` · **merge** `BLOCKED` · **repo** `vouchington/vouchington` · **head** `b9ddec6445057649f5ccabe0e2dce51ba7d00c46`
+**status** `PENDING` · **merge** `BLOCKED` · **repo** `vouchington/vouchington`
 **transport** `rest`
 
 ## Unavailable transport fields

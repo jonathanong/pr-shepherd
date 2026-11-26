@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY` · **head** `abc123`
+**status** `READY`
 **summary** 1 passing · **remainingSeconds** 600
 
 ## Review summaries (edited since first look — already minimized; do not re-minimize)

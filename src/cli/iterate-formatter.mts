@@ -82,7 +82,8 @@ export function formatIterateResult(
       ? ` · **merge** \`${result.mergeStateStatus}\``
       : "";
   const stateSeg = verbose || result.state !== "OPEN" ? ` · **state** \`${result.state}\`` : "";
-  const headSeg = result.headSha ? ` · **head** \`${result.headSha}\`` : "";
+  // Verbose only, like baseBranch: the raw result and verbose JSON always carry `headSha`.
+  const headSeg = verbose && result.headSha ? ` · **head** \`${result.headSha}\`` : "";
   const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg}${repoSeg}${headSeg}${baseBranchSeg}`;
 
   const branchSeg = branchStateSegment(result);

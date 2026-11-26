@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo` · **head** `abc123`
+**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo`
 **summary** 1 passing · **branch** conflicts with stack trunk `main`
 Merge queue: position 1 UNMERGEABLE [Required]
 Stack: 7 (layer 1/1, base main)

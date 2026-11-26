@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `IN_PROGRESS` · **head** `abc123`
+**status** `IN_PROGRESS`
 **summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / build`
 

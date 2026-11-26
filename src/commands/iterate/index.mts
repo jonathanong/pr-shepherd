@@ -106,7 +106,7 @@ async function runIterateCore(
       ...opts,
       prNumber,
       // Outdated Shepherd-visible threads are always resolved by iterate.
-      autoResolve: !readOnly,
+      autoResolve: true,
       autoMinimizeSuppressed: !readOnly && config.actions["auto-minimize-suppressed"],
       reviewOutputMaxChars: config.iterate["review-output-max-chars"],
     },

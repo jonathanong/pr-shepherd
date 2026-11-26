@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `PENDING` · **merge** `BLOCKED` · **reviewDecision** `CHANGES_REQUESTED` · **head** `abc123`
+**status** `PENDING` · **merge** `BLOCKED` · **reviewDecision** `CHANGES_REQUESTED`
 
 ## Changes-requested reviews
 

@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY` · **head** `abc123`
+**status** `READY`
 **summary** 1 passing
 Stack: 7 (layer 2/3, base stack/7/1)
 

@@ -1,6 +1,6 @@
 # PR #42 [MERGE]
 
-**status** `READY` · **head** `abc123`
+**status** `READY`
 **summary** 1 passing
 
 ## Edited comments (2) — informational; edits do not block readiness

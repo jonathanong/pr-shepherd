@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `PENDING` · **merge** `BEHIND` · **head** `abc123`
+**status** `PENDING` · **merge** `BEHIND`
 **branch** behind PR base `main`
 **transport** `rest`
 

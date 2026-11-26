@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY` · **head** `abc123`
+**status** `READY`
 **remainingSeconds** 600
 
 ## First-look items (1) — acknowledge status before acting

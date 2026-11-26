@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **repo** `owner/repo` · **head** `abc123`
+**status** `FAILING` · **repo** `owner/repo`
 **summary** 5 inProgress, 1 queued
 **activity** 0 commits · 0 review rounds · active: `CI / e2e`, `CI / lint`, `review`, `format`, `build`, +1 more
 

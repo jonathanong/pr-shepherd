@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `READY` · **repo** `owner/repo` · **head** `abc123`
+**status** `READY` · **repo** `owner/repo`
 **remainingSeconds** 600
 **merge queue** enabled `false` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`

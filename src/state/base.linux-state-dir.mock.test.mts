@@ -157,7 +157,7 @@ describe("resolveStateBase — Linux shared per-user directory", () => {
       throw errno("ENOENT");
     });
 
-    expect(runReadOnly(() => resolveStateBase())).toBe(FALLBACK);
+    expect(runReadOnly(() => resolveStateBase())).toBe(SHARED);
     expect(fsMock.mkdirSync).not.toHaveBeenCalled();
 
     expect(resolveStateBase()).toBe(SHARED);

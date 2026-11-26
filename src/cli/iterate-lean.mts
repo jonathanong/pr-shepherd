@@ -57,7 +57,6 @@ export function projectIterateLean(
     action: result.action,
     pr: result.pr,
     repo: result.repo || undefined,
-    ...(result.headSha && { headSha: result.headSha }),
     ...(result.transport && { transport: result.transport }),
     ...(result.transportReason && { transportReason: result.transportReason }),
     ...(result.transportUnavailable?.length && {

@@ -1,6 +1,6 @@
 # PR #42 [READY]
 
-**status** `READY` · **repo** `owner/repo` · **head** `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 300
 Merge queue: No [Required]
 Stack: 7 (layer 1/1, base main)

@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo` · **head** `abc123`
+**status** `IN_PROGRESS` · **repo** `owner/repo`
 **summary** 1 inProgress, 1 queued
 **transport** `rest`
 

@@ -213,6 +213,7 @@ describe("headSha on terminal results", () => {
     await serveRaw();
     const result = await createPrShepherd({ cwd, transport: "graphql" }).iterate({ pr: REF });
     expect(result).toMatchObject({ action: "cancel", reason: "merged", headSha: HEAD });
-    expect(formatIterateResult(result as never)).toContain(HEAD);
+    expect(formatIterateResult(result as never, { verbose: true })).toContain(HEAD);
+    expect(formatIterateResult(result as never)).not.toContain(HEAD);
   });
 });

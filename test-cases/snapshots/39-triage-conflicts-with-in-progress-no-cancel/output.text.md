@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo` · **head** `abc123`
+**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo`
 **summary** 1 inProgress · **branch** conflicts with PR base `main`
 **activity** 0 commits · 0 review rounds · active: `CI / tests`
 

@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo` · **head** `abc123`
+**status** `IN_PROGRESS` · **repo** `owner/repo`
 **summary** 1 queued
 **activity** 0 commits · 0 review rounds · active: `Deploy / production`
 

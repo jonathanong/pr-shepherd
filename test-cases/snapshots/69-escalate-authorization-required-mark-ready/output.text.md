@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `READY` · **repo** `owner/repo` · **head** `abc123`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 300 · **isDraft**
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
