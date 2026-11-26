@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 600
 Merge queue: position 2 QUEUED [Not Required]
 **merge queue** enabled `false` · inQueue `true` · state `QUEUED` · position `2` · headCommit `queue-head-1` · checkCommit `queue-head-1`

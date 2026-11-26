@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING` · **repo** `owner/repo` · **head** `abc123`
 Merge queue: No [Required]
 **merge queue** enabled `true` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `MANUAL` · createdAtUnix `1715799000` · actor `@maintainer` · commit `queue-commit-1` · parents `abc123`

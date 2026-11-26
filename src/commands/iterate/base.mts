@@ -15,6 +15,7 @@ export function buildIterateBase(
   return {
     pr: report.pr,
     repo: report.repo,
+    ...(report.headSha && { headSha: report.headSha }),
     ...(report.transport && { transport: report.transport }),
     ...(report.transportReason && { transportReason: report.transportReason }),
     ...(report.transportUnavailable?.length && {

@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `BEHIND` · **repo** `owner/repo`
+**status** `FAILING` · **merge** `BEHIND` · **repo** `owner/repo` · **head** `abc123`
 **branch** behind PR base `main`
 
 ## Failing checks

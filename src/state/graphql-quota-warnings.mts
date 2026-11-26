@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, rename, unlink, writeFile } from "./guarded-fs.mts";
 import { dirname, join } from "node:path";
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import type { ApiResourceUsage, GraphqlQuotaWarning } from "../types.mts";

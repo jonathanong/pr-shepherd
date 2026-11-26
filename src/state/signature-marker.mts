@@ -1,6 +1,7 @@
 /** A one-field marker file in the PR state directory: "this exact situation was already presented". */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, writeFile } from "./guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 

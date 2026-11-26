@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `IN_PROGRESS`
+**status** `IN_PROGRESS` · **head** `abc123`
 **summary** 1 inProgress
 **transport** `rest`
 

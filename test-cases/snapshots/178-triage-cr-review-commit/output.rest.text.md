@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `PENDING` · **merge** `BLOCKED`
+**status** `PENDING` · **merge** `BLOCKED` · **head** `def5678abc1234def5678abc1234def5678abc1`
 **transport** `rest`
 
 ## Unavailable transport fields

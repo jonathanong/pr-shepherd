@@ -1,6 +1,6 @@
 # PR #42 [MARK_READY]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 300
 
 MARKED READY: PR #42 converted from draft to ready for review

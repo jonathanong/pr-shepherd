@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING`
+**status** `FAILING` · **head** `abc123`
 
 ## Actionable comments
 

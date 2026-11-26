@@ -3,6 +3,7 @@ import { runCheck } from "../check.mts";
 import { clearReadyDelay, updateReadyDelay } from "../ready-delay.mts";
 import { getCurrentPrNumber } from "../../github/client.mts";
 import { loadConfig } from "../../config/load.mts";
+import { isReadOnly } from "../../execution-context.mts";
 import { EXIT, ShepherdError } from "../../exit-codes.mts";
 import { buildWaitLog, buildTerminalCancelResult, blockedCancelNote } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
@@ -96,14 +97,17 @@ async function runIterateCore(
     );
   }
   const checkContext = createCheckExecutionContext(readyDelaySeconds);
+  // A read-only status check sends no GitHub mutation: nothing is auto-resolved or auto-minimized,
+  // so those IDs stay in the agent-facing set exactly as when a mutation is not confirmed.
+  const readOnly = isReadOnly();
 
   const report = await runCheck(
     {
       ...opts,
       prNumber,
       // Outdated Shepherd-visible threads are always resolved by iterate.
-      autoResolve: true,
-      autoMinimizeSuppressed: config.actions["auto-minimize-suppressed"],
+      autoResolve: !readOnly,
+      autoMinimizeSuppressed: !readOnly && config.actions["auto-minimize-suppressed"],
       reviewOutputMaxChars: config.iterate["review-output-max-chars"],
     },
     checkContext,
@@ -172,7 +176,9 @@ async function runIterateCore(
   // any ID it did not confirm minimized falls back into the agent-facing set so
   // the apply command remains a working fallback instead of silently dropping it.
   let reviewSummaryIds = minimizeIds;
-  if (selfMinimizeIds.length > 0) {
+  if (selfMinimizeIds.length > 0 && readOnly) {
+    reviewSummaryIds = [...reviewSummaryIds, ...selfMinimizeIds];
+  } else if (selfMinimizeIds.length > 0) {
     checkContext.invalidateReceiptSummary();
     const { minimized } = await autoMinimizeComments(selfMinimizeIds);
     const minimizedIds = new Set(minimized);
@@ -398,7 +404,8 @@ async function runIterateCore(
       escalate: { ...escalation, humanMessage: buildEscalateHumanMessage(escalation, report.pr) },
     };
   }
-  const autoMarkReady = !opts.noAutoMarkReady && config["mark-ready"].auto;
+  // Marking a draft ready is a GitHub mutation, so a read-only check treats it as disabled.
+  const autoMarkReady = !opts.noAutoMarkReady && !readOnly && config["mark-ready"].auto;
   if (canMarkReady && !autoMarkReady) {
     await clearReadyDelay(report.pr, repoOwner, repoName);
     await clearStallState(stallKey);

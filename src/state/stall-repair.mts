@@ -10,7 +10,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { writeFile } from "./guarded-fs.mts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveStateBase } from "./base.mts";

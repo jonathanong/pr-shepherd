@@ -1,5 +1,7 @@
-import { mkdir, open, readdir, unlink } from "node:fs/promises";
+import { open, readdir } from "node:fs/promises";
+import { mkdir, unlink } from "./guarded-fs.mts";
 import { join } from "node:path";
+import { isReadOnly } from "../execution-context.mts";
 import type { GraphqlQuotaWarning } from "../types.mts";
 
 export async function claimWarning(
@@ -8,6 +10,8 @@ export async function claimWarning(
   now: number,
   rearmEpoch: number,
 ): Promise<boolean> {
+  // A read-only check surfaces the warning without taking the claim another session would need.
+  if (isReadOnly()) return true;
   const claimsDir = `${path}.claims`;
   const claimPath = join(
     claimsDir,

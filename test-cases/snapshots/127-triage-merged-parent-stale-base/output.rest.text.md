@@ -1,6 +1,6 @@
 # PR #2099 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY`
+**status** `FAILING` · **merge** `DIRTY` · **head** `b9ddec6445057649f5ccabe0e2dce51ba7d00c46`
 **branch** conflicts with PR base `knip-exports-retentions`
 **transport** `rest`
 

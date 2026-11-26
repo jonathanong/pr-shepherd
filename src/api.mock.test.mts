@@ -90,6 +90,7 @@ describe("public API", () => {
       "getJournal",
       "iterate",
       "stack",
+      "status",
       "suggest",
     ]);
     await shepherd.iterate({ pr: "https://github.com/openai/pr-shepherd/pull/42" });

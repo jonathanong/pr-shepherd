@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo`
+**status** `IN_PROGRESS` · **repo** `owner/repo` · **head** `abc123`
 **summary** 111 passing, 8 inProgress, 3 queued
 **activity** 0 commits · 0 review rounds · active: `CI / job 1`, `CI / job 2`, `CI / job 3`, `CI / job 4`, `CI / job 5`, +6 more
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`

@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo`
+**status** `IN_PROGRESS` · **repo** `owner/repo` · **head** `abc123`
 **summary** 7 passing, 1 inProgress, 7 superseded
 **ignored** `Bot Review 1`, `Bot Review 2`, `Bot Review 3`, `Bot Review 4`, `Bot Review 5`, +2 more
 **superseded** `Suite 1 / build`, `Suite 2 / build`, `Suite 3 / build`, `Suite 4 / build`, `Suite 5 / build`, +2 more

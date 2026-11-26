@@ -1,6 +1,7 @@
 /** A caller's acknowledgment of one observed CI-driven native-stack queue removal. */
 
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, rename, unlink, writeFile } from "./guarded-fs.mts";
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";

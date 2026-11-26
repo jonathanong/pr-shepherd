@@ -1,6 +1,6 @@
 # PR #42 [READY]
 
-**status** `READY` · **merge** `BLOCKED` · **repo** `owner/repo`
+**status** `READY` · **merge** `BLOCKED` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 300
 **transport** `rest`
 

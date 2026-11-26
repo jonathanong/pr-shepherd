@@ -1,1 +1,1 @@
-{"action":"cancel","pr":42,"repo":"owner/repo","status":"READY","summary":{"passing":1,"superseded":1},"supersededNames":["CI / build"],"reason":"ready-delay-elapsed","log":"CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping"}
+{"action":"cancel","pr":42,"repo":"owner/repo","headSha":"abc123","status":"READY","summary":{"passing":1,"superseded":1},"supersededNames":["CI / build"],"reason":"ready-delay-elapsed","log":"CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping"}

@@ -1,6 +1,6 @@
 # PR #42 [READY]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 **summary** 1 passing · **remainingSeconds** 300
 **transport** `rest`
 

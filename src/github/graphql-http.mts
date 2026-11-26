@@ -4,6 +4,7 @@ import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
 import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
 import { githubFetch } from "./github-fetch.mts";
+import { assertGraphQlReadable } from "./read-only-guard.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
 import { withoutToleratedErrors } from "./graphql-tolerated-errors.mts";
 import { CCR_GRAPHQL_REFUSAL_MESSAGE, isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
@@ -58,6 +59,7 @@ async function graphqlAttempt<T>(
   retryAfterSeconds: number | undefined;
   errors: GitHubGraphQlError[] | undefined;
 }> {
+  assertGraphQlReadable(query);
   const url = `${BASE_URL}/graphql`;
   const n = nextEntry();
   appendEntry(

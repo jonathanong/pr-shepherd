@@ -1,4 +1,5 @@
-import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { writeFile, rename, unlink, mkdir } from "./guarded-fs.mts";
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 

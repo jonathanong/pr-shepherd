@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { writeFile, mkdir, unlink } from "../state/guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "../state/base.mts";
 import { rest, restWithRateLimit } from "../github/http.mts";

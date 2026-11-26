@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 300 · **isDraft**
 **transport** `rest`
 

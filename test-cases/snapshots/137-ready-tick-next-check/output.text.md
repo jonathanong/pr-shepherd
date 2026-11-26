@@ -1,6 +1,6 @@
 # PR #42 [READY]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 127
 **nextCheck** `2024-05-15T19:09:00Z` · in 140s · reason `ready-delay`
 

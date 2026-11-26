@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo` · **head** `abc123`
 Merge queue: position 1 AWAITING_CHECKS [Required]
 **merge queue** enabled `true` · inQueue `true` · state `AWAITING_CHECKS` · position `1`
 **nextCheck** `2024-05-15T19:12:00Z` · in 320s · reason `merge-queue`

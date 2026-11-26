@@ -1,6 +1,6 @@
 # PR #42 [MERGE]
 
-**status** `READY`
+**status** `READY` · **head** `abc123`
 **summary** 1 passing
 
 ## Instructions

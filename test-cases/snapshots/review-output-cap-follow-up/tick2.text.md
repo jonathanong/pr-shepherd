@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `UNRESOLVED_COMMENTS`
+**status** `UNRESOLVED_COMMENTS` · **head** `abc123`
 **summary** 1 passing
 
 **showing** 42 of 75 review items

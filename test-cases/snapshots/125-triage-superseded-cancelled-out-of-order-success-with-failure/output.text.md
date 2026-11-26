@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing, 1 superseded
 **superseded** `CI / build`
 

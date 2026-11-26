@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, mkdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { link, mkdir, rename, rm, unlink, writeFile } from "./guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 import type { RestMergeOptions, RestMergeResponse } from "../github/rest-merge.mts";

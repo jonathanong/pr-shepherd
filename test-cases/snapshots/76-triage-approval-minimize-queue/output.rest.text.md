@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **remainingSeconds** 600
 **transport** `rest`
 

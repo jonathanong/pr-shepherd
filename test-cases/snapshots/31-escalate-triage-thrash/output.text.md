@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required

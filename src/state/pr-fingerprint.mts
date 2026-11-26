@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, rename, unlink, writeFile } from "./guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 import { discoverRuleFiles } from "../classify/loader.mts";

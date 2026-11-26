@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY`
+**status** `READY` · **head** `abc123`
 **remainingSeconds** 600
 
 ## Review IDs to minimize queue

@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `PENDING` · **reviewDecision** `APPROVED` · **repo** `owner/repo`
+**status** `PENDING` · **reviewDecision** `APPROVED` · **repo** `owner/repo` · **head** `abc123`
 **blockingBotReviewInProgress**
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 

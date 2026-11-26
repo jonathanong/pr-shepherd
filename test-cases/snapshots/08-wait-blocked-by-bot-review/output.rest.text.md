@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `PENDING` · **repo** `owner/repo`
+**status** `PENDING` · **repo** `owner/repo` · **head** `abc123`
 **blockingBotReviewInProgress**
 **transport** `rest`
 

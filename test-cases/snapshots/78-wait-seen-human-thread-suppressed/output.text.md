@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 600
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 

@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo`
+**status** `IN_PROGRESS` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 inProgress, 1 superseded
 **superseded** `CI / build`
 **activity** 0 commits · 0 review rounds · active: `CI / tests`

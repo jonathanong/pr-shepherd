@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY`
+**status** `FAILING` · **merge** `DIRTY` · **head** `abc123`
 **summary** 1 passing
 
 ## Instructions

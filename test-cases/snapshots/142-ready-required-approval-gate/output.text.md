@@ -1,6 +1,6 @@
 # PR #42 [READY]
 
-**status** `READY` · **merge** `BLOCKED` · **reviewDecision** `REVIEW_REQUIRED` · **repo** `owner/repo`
+**status** `READY` · **merge** `BLOCKED` · **reviewDecision** `REVIEW_REQUIRED` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 300
 Approvals: None [Required]
 **nextCheck** `2024-05-15T19:12:00Z` · in 320s · reason `ready-delay`

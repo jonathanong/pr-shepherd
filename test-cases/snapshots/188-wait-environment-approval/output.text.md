@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo`
+**status** `IN_PROGRESS` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 queued
 **activity** 0 commits · 0 review rounds · active: `Deploy / production`
 **pending deployment** `Deploy / production` (run `700`) — environment `production`, required reviewers team `release-managers`, viewer can approve: yes, wait timer 5 min

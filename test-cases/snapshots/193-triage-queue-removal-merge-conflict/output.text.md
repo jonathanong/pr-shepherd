@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **remainingSeconds** 600
 **merge queue** enabled `false` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `MERGE_CONFLICT` · createdAtUnix `1715799000` · commit `queue-commit-1` · parents `abc123`

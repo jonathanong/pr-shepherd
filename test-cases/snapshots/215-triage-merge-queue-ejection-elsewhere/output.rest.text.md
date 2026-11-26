@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **remainingSeconds** 600
 **transport** `rest`
 

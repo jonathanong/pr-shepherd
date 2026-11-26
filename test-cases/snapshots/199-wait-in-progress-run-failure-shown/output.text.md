@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / e2e`
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`

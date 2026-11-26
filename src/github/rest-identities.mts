@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, writeFile } from "../state/guarded-fs.mts";
 import { join } from "node:path";
 import { resolveStateBase } from "../state/base.mts";
 import type { SeenMarker } from "../state/seen-comments.mts";

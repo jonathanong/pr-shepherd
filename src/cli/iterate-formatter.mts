@@ -82,7 +82,8 @@ export function formatIterateResult(
       ? ` · **merge** \`${result.mergeStateStatus}\``
       : "";
   const stateSeg = verbose || result.state !== "OPEN" ? ` · **state** \`${result.state}\`` : "";
-  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg}${repoSeg}${baseBranchSeg}`;
+  const headSeg = result.headSha ? ` · **head** \`${result.headSha}\`` : "";
+  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg}${repoSeg}${headSeg}${baseBranchSeg}`;
 
   const branchSeg = branchStateSegment(result);
   let summaryLine: string | null;
@@ -188,7 +189,7 @@ export function formatIterateResult(
       // A merged or closed PR needs no more data: the `[CANCEL]` heading is enough. Cancel has no
       // instruction steps; the skill's recurrence rule says what to do after it.
       if (!verbose && (result.reason === "merged" || result.reason === "closed")) {
-        return finish(`${heading} — ${result.reason}`);
+        return finish(`${heading} — ${result.reason}${headSeg}`);
       }
       const cancelHeaderLines = [
         `${heading} — ${result.reason}`,

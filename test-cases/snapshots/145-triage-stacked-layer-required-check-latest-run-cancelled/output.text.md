@@ -1,6 +1,6 @@
 # PR #2687 [TRIAGE]
 
-**status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `vouchington/vouchington`
+**status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `vouchington/vouchington` · **head** `cc74f59feac8909829d8cb75d9ca2c00647ac95e`
 **summary** 3 passing
 Required status checks: static, web, gitleaks [Required]
 Stack: 2688 (layer 2/2, base main)

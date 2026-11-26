@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING` · **repo** `owner/repo` · **head** `abc123`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

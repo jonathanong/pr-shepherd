@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `FAILING` · **merge** `BLOCKED` · **repo** `owner/repo`
+**status** `FAILING` · **merge** `BLOCKED` · **repo** `owner/repo` · **head** `abc123`
 **transport** `rest`
 
 ## Unavailable transport fields

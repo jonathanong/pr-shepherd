@@ -1,1 +1,1 @@
-# PR #42 [CANCEL] — closed
+# PR #42 [CANCEL] — closed · **head** `abc123`

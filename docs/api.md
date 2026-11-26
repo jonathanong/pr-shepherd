@@ -20,6 +20,7 @@ const shepherd = createPrShepherd({ cwd: "/path/to/repo", transport: "auto" });
 
 const tick = await shepherd.iterate({ pr: 42, merge: true }); // one tick, with nextCheck
 const group = await shepherd.iterate({ prs: [42, 43] });
+const verdict = await shepherd.status({ pr: 42, merge: true, readyDelaySeconds: 0 }); // read-only
 const stack = await shepherd.stack({ pr: 43 });
 const journal = await shepherd.getJournal({ pr: "owner/repo#42" });
 const applied = await shepherd.apply({
@@ -54,6 +55,7 @@ const patches = await shepherd.suggest({
 | Method                         | Same as                                  |
 | ------------------------------ | ---------------------------------------- |
 | `iterate(input?)`              | MCP `iterate` / `pr-shepherd iterate`    |
+| `status(input?)`               | None — library only, no CLI or MCP       |
 | `stack({ refs })`              | MCP `stack` / `pr-shepherd stack --once` |
 | `apply({ pr, operations })`    | MCP `apply`                              |
 | `getJournal({ pr })`           | MCP `get_journal`                        |
@@ -73,6 +75,21 @@ const patches = await shepherd.suggest({
 Every call runs one tick. A singular call returns the raw `IterateResult`, which carries `nextCheck { at, inSeconds, reason }` when another tick is meaningful ([cloud.md](cloud.md#nextcheck)).
 
 A non-empty `prs` set runs one compact summary tick and returns `PollSummaryResult`. Every reference must resolve to one repository. It keeps no ready-delay state and emits no rebase/push commands; its only GitHub mutations (with their seen markers) are rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported per row as `ruleAutoResolve`. The caller owns recurrence.
+
+Every `IterateResult` carries `headSha`, the PR head commit that tick evaluated (omitted only when GitHub did not report it). Terminal `cancel` results (`merged`, `closed`) carry it too. Aggregate `PollSummaryResult` rows already carry their head as `headRefOid`; no `headSha` is added there.
+
+### `status`
+
+`status({ pr?, merge?, readyDelaySeconds?, stallTimeoutSeconds?, transport?, instructions? })` answers "is this PR ready to merge at this exact head?" for an outside supervisor. It runs one single-PR `iterate` tick through the same code path as `iterate` and returns the same `IterateResult`, so its verdict cannot drift from `iterate`'s; read `action` and `headSha` together. There is no `prs` form (it rejects one), and `status` is library only: there is no CLI command or MCP tool.
+
+The contract is read-only:
+
+- **No GitHub mutations.** The tick skips every mutation site: outdated-thread and classification-rule auto-resolve/minimize (those IDs stay in the result for the caller, as when GitHub does not confirm a mutation), the in-process minimize of already-seen review summaries, and mark-ready. As a backstop, the GraphQL and REST request layers throw `ReadOnlyViolationError` for a mutation document or any non-GET/HEAD REST method; a normal tick never reaches it.
+- **No local state writes.** Nothing under the state directory is created, updated, or deleted: seen markers, fix attempts, stall state, ready receipts, ready-delay marker, fingerprints, REST ETag cache and snapshots, check blockers, follow-up and retrigger markers, quota claims and warnings, signature markers, queue-removal acknowledgments, uncertain-reply records, identity cache. The per-worktree debug log is skipped too. Deletes and clears count as writes, so a stale ready receipt, ready-delay marker, or stall state is never cleared, and a concurrent `pr-shepherd <pr> --until-terminal` session on the same PR is not disturbed. Reads still work: seen markers decide first-look items (a following `iterate` still shows them), and the ready-delay marker decides the countdown.
+- **Ready delay.** The marker is never created, refreshed, or deleted. With no usable marker (none, another head, or a future timestamp) the countdown has not started, so a ready PR reports `action: "ready"` with `remainingSeconds = readyDelaySeconds`. With a marker, `status` reports the remaining time it implies. `readyDelaySeconds: 0` has elapsed at once, so a READY PR with `merge: true` returns `action: "merge"`. A current ready receipt also counts as elapsed. Because nothing is written, repeated `status` calls never advance a countdown; only the poll loop or `iterate` does.
+- **Drafts.** Marking a draft ready is a GitHub mutation, so a clean draft is treated as if automatic mark-ready were disabled: `status` returns `cancel` with reason `auto-mark-ready-disabled` instead of `mark_ready`.
+- **Lock.** `status` takes no watch lock, like the library `iterate`; only the CLI poll loop acquires one (`src/state/watch-lock.mts`), so concurrent calls and a running watcher do not block each other.
+- **Printed commands.** Instructions and generated commands in the result are only printed, never run.
 
 ### `stack`
 

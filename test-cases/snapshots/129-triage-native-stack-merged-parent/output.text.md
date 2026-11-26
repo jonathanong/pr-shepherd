@@ -1,6 +1,6 @@
 # PR #2547 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY`
+**status** `FAILING` · **merge** `DIRTY` · **head** `3333333333333333333333333333333333333333`
 **branch** conflicts with stack trunk `main`
 Stack: 2535 (layer 3/6, base main)
 

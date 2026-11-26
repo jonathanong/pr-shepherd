@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `FAILING` · **merge** `BEHIND` · **repo** `owner/repo`
+**status** `FAILING` · **merge** `BEHIND` · **repo** `owner/repo` · **head** `abc123`
 **branch** behind PR base `main`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required

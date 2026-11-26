@@ -1,1 +1,1 @@
-# PR #42 [CANCEL] — merged
+# PR #42 [CANCEL] — merged · **head** `abc123`

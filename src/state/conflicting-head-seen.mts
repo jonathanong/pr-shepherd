@@ -6,7 +6,8 @@
  * starts at this observation instead of `committedDate`.
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, writeFile } from "./guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 

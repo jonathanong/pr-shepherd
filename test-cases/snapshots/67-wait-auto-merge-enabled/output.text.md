@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo` · **head** `abc123`
 **summary** 1 passing · **remainingSeconds** 600
 **merge queue** enabled `false` · inQueue `false`
 **auto-merge** method `SQUASH` · enabledAtUnix `1715790000` · by `@alice`
