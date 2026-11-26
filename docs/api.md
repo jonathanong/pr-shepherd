@@ -90,6 +90,7 @@ The contract is read-only:
 - **Drafts.** Marking a draft ready is a GitHub mutation, so a clean draft is treated as if automatic mark-ready were disabled: `status` returns `cancel` with reason `auto-mark-ready-disabled` instead of `mark_ready`.
 - **Lock.** `status` takes no watch lock, like the library `iterate`; only the CLI poll loop acquires one (`src/state/watch-lock.mts`), so concurrent calls and a running watcher do not block each other.
 - **Printed commands.** Instructions and generated commands in the result are only printed, never run.
+- **Reading the verdict.** With `merge: true`, `action === "merge"` together with a matching `headSha` means Shepherd would merge that head now. A clean PR can still return another action: `wait` while it is already queued or set to auto-merge, `cancel` (`auto-mark-ready-disabled`) for a draft, and `wait` when a fresh re-read regresses. Treat every action other than `merge` as not ready.
 
 ### `stack`
 

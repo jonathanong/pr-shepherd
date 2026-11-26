@@ -50,6 +50,10 @@ async function loadResolveStateBase() {
   return (await import("./base.mts")).resolveStateBase;
 }
 
+async function loadRunReadOnly() {
+  return (await import("../execution-context.mts")).runReadOnly;
+}
+
 beforeEach(() => {
   for (const fn of Object.values(fsMock)) fn.mockReset();
   mockExecFileSync.mockReset();
@@ -143,6 +147,28 @@ describe("resolveStateBase — Linux shared per-user directory", () => {
     const resolveStateBase = await loadResolveStateBase();
 
     expect(resolveStateBase()).toBe("/custom/state");
+    expect(fsMock.mkdirSync).not.toHaveBeenCalled();
+  });
+
+  it("never creates the shared base in a read-only scope, and does not cache its absence", async () => {
+    const resolveStateBase = await loadResolveStateBase();
+    const runReadOnly = await loadRunReadOnly();
+    fsMock.lstatSync.mockImplementationOnce(() => {
+      throw errno("ENOENT");
+    });
+
+    expect(runReadOnly(() => resolveStateBase())).toBe(FALLBACK);
+    expect(fsMock.mkdirSync).not.toHaveBeenCalled();
+
+    expect(resolveStateBase()).toBe(SHARED);
+    expect(fsMock.mkdirSync).toHaveBeenCalledWith(SHARED, { mode: 0o700 });
+  });
+
+  it("reads an existing shared base in a read-only scope without creating it", async () => {
+    const resolveStateBase = await loadResolveStateBase();
+    const runReadOnly = await loadRunReadOnly();
+
+    expect(runReadOnly(() => resolveStateBase())).toBe(SHARED);
     expect(fsMock.mkdirSync).not.toHaveBeenCalled();
   });
 });
