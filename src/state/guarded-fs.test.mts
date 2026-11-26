@@ -8,7 +8,16 @@ import {
   runReadOnly,
   runWithExecutionCwd,
 } from "../execution-context.mts";
-import { mkdir, rename, rm, unlink, writeFile } from "./guarded-fs.mts";
+import {
+  appendFileSyncGuarded,
+  link,
+  mkdir,
+  mkdirSyncGuarded,
+  rename,
+  rm,
+  unlink,
+  writeFile,
+} from "./guarded-fs.mts";
 
 let dir: string;
 beforeEach(() => {
@@ -21,6 +30,11 @@ describe("guarded-fs", () => {
     await mkdir(join(dir, "a"), { recursive: true });
     await writeFile(join(dir, "a", "f"), "x");
     expect(readFileSync(join(dir, "a", "f"), "utf8")).toBe("x");
+    await link(join(dir, "a", "f"), join(dir, "a", "g"));
+    mkdirSyncGuarded(join(dir, "b"), { recursive: true });
+    appendFileSyncGuarded(join(dir, "b", "log"), "line");
+    expect(readFileSync(join(dir, "a", "g"), "utf8")).toBe("x");
+    expect(readFileSync(join(dir, "b", "log"), "utf8")).toBe("line");
   });
 
   it("makes writes, directory creation, renames and deletes no-ops in a read-only scope", async () => {
@@ -33,6 +47,10 @@ describe("guarded-fs", () => {
       await rename(existing, join(dir, "moved"));
       await unlink(existing);
       await rm(existing, { force: true });
+      await link(existing, join(dir, "linked"));
+      mkdirSyncGuarded(join(dir, "sync-dir"), { recursive: true });
+      appendFileSyncGuarded(join(dir, "appended"), "line");
+      appendFileSyncGuarded(existing, "more");
     });
     expect(readdirSync(dir)).toEqual(["keep"]);
     expect(readFileSync(existing, "utf8")).toBe("keep");

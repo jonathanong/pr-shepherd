@@ -208,6 +208,19 @@ describe("createPrShepherd().status", () => {
     expect(listing(stateDir)).toEqual([]);
   });
 
+  it("forwards the stall timeout and instruction style to the tick", async () => {
+    await serveRaw();
+    const result = await createPrShepherd({ cwd, transport: "graphql" }).status({
+      pr: REF,
+      readyDelaySeconds: 600,
+      stallTimeoutSeconds: 120,
+      instructions: "playbook",
+    });
+    expect(result).toMatchObject({ action: "ready", remainingSeconds: 600, headSha: HEAD });
+    expect(listing(stateDir)).toEqual([]);
+    expect(mutations()).toEqual([]);
+  });
+
   it("rejects a prs selector", async () => {
     await serveRaw();
     await expect(createPrShepherd({ cwd }).status({ prs: [REF] } as never)).rejects.toThrow(

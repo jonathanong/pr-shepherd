@@ -10,6 +10,7 @@ import {
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
+import { runReadOnly } from "../execution-context.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -87,5 +88,21 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     if (result.action !== "triage") return;
     expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
     expect(result.triage.resolveCommand.argv).toContain("PRR_BOT");
+  });
+
+  it("leaves seen summaries to the agent-facing command in a read-only scope", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runReadOnly(() => runIterate(makeOpts()));
+
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
   });
 });
