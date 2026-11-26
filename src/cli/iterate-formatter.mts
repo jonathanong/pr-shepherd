@@ -190,7 +190,7 @@ export function formatIterateResult(
       // A merged or closed PR needs no more data: the `[CANCEL]` heading is enough. Cancel has no
       // instruction steps; the skill's recurrence rule says what to do after it.
       if (!verbose && (result.reason === "merged" || result.reason === "closed")) {
-        return finish(`${heading} — ${result.reason}${headSeg}`);
+        return finish(`${heading} — ${result.reason}`);
       }
       const cancelHeaderLines = [
         `${heading} — ${result.reason}`,
