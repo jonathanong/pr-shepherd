@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { runReadOnly } from "../execution-context.mts";
 import { clearReadyDelay, updateReadyDelay } from "./ready-delay.mts";
 
 const OWNER = "test-owner";
@@ -164,5 +165,23 @@ describe("updateReadyDelay", () => {
     await expect(updateReadyDelay(-1, true, DELAY, OWNER, REPO, HEAD)).rejects.toThrow(
       'Invalid state key segment "pr"',
     );
+  });
+});
+
+describe("updateReadyDelay in a read-only scope", () => {
+  it("reports an elapsed countdown from an existing marker and leaves it in place", async () => {
+    const content = `${secondsAgo(DELAY + 5)} head-a`;
+    await writeMarker(content);
+    const state = await runReadOnly(() => updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD));
+    expect(state).toEqual({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+    expect(await readFile(markerPath(), "utf8")).toBe(content);
+  });
+
+  it("keeps the marker when the PR is not ready", async () => {
+    const content = `${secondsAgo(5)} head-a`;
+    await writeMarker(content);
+    const state = await runReadOnly(() => updateReadyDelay(PR, false, DELAY, OWNER, REPO, HEAD));
+    expect(state).toEqual({ isReady: false, shouldCancel: false, remainingSeconds: DELAY });
+    expect(await readFile(markerPath(), "utf8")).toBe(content);
   });
 });

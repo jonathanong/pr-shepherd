@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
-import { readFile, writeFile, rename, unlink, mkdir, access, readdir } from "node:fs/promises";
+import { readFile, access, readdir } from "node:fs/promises";
+import { writeFile, rename, unlink, mkdir } from "./guarded-fs.mts";
 import { join, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";

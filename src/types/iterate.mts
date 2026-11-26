@@ -55,6 +55,8 @@ export interface IterateResultBase {
   transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   repo: string;
+  /** The PR head commit this tick evaluated. Omitted when GitHub did not report it. */
+  headSha?: string;
   status: ShepherdStatus;
   state: "OPEN" | "CLOSED" | "MERGED" | "UNKNOWN";
   mergeStateStatus: MergeStateStatus;

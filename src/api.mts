@@ -34,7 +34,7 @@ import {
   applyQueueRemovalAck,
   type ApplyQueueRemovalResult,
 } from "./commands/apply-queue-removal.mts";
-import { runWithExecutionCwd } from "./execution-context.mts";
+import { runReadOnly, runWithExecutionCwd } from "./execution-context.mts";
 import { loadConfig } from "./config/load.mts";
 import {
   parsePrReference,
@@ -111,6 +111,15 @@ export type SingleIterateInput = IterateOptions & {
 export type MultiIterateInput = IterateOptions & { prs: PrReference[]; pr?: never };
 
 export type IterateInput = SingleIterateInput | MultiIterateInput;
+
+/**
+ * The per-tick options of a single-PR `iterate` that a read-only `status` check honors. There is
+ * no `prs`: `status` answers for exactly one PR.
+ */
+export type StatusInput = Pick<
+  SingleIterateInput,
+  "pr" | "merge" | "readyDelaySeconds" | "stallTimeoutSeconds" | "transport" | "instructions"
+>;
 
 /**
  * One aggregate tick over one native stack. `refs` is one stack number (or `owner/repo#N` naming
@@ -224,6 +233,11 @@ export interface PrShepherd {
   iterate(input?: SingleIterateInput): Promise<IterateResult>;
   iterate(input: MultiIterateInput): Promise<PollSummaryResult>;
   iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
+  /**
+   * One single-PR `iterate` tick through the same code path as `iterate`, with no GitHub mutation
+   * and no local state write. Library only: there is no CLI command or MCP tool for it.
+   */
+  status(input?: StatusInput): Promise<IterateResult>;
   stack(input: StackInput): Promise<PollSummaryResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
   suggest(input: SuggestInput): Promise<SuggestResult>;
@@ -290,8 +304,31 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     });
   }
 
+  function status(input: StatusInput = {}): Promise<IterateResult> {
+    // The read-only scope wraps the whole client run, so transport fallback probes and quota
+    // bookkeeping inside the runner are covered too.
+    return runReadOnly(() =>
+      runInClient(input, async () => {
+        if (input === null || typeof input !== "object" || "prs" in input) {
+          throw new PrShepherdValidationError("status takes one PR: pass pr, not prs");
+        }
+        const { pr, merge, readyDelaySeconds, stallTimeoutSeconds, instructions } = input;
+        const target = resolvePrReference(pr);
+        return runIterateTick({
+          ...(merge !== undefined && { merge }),
+          ...(readyDelaySeconds !== undefined && { readyDelaySeconds }),
+          ...(stallTimeoutSeconds !== undefined && { stallTimeoutSeconds }),
+          ...(instructions !== undefined && { instructions }),
+          ...target,
+          format: "json",
+        });
+      }),
+    );
+  }
+
   return Object.freeze({
     iterate,
+    status,
 
     stack(input: StackInput) {
       return runInClient(input ?? {}, async () => {

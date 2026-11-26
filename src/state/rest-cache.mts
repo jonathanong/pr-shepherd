@@ -19,7 +19,8 @@
  * directory — there is no separate pruning routine.
  */
 
-import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { writeFile, rename, unlink, mkdir } from "./guarded-fs.mts";
 import { dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { resolvePrStatePath } from "./base.mts";

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { SAFE_PR_NUMBER, SAFE_SEGMENT } from "../util/path-segment.mts";
 import { resolveDurableStateBase } from "./durable-state.mts";
+import { isReadOnly } from "../execution-context.mts";
 
 /** Read once per process; null when the platform is not Linux or the shared base is unusable. */
 let linuxUserStateBase: string | null | undefined;
@@ -14,22 +15,29 @@ let linuxUserStateBase: string | null | undefined;
  * directory must be a real directory (not a symlink) owned by this user and not writable by
  * anyone else; it must also be readable, writable, and searchable from this process. Otherwise fall back to `TMPDIR`.
  */
-function readLinuxUserStateBase(): string | null {
+function sharedLinuxStateDir(): string {
+  return join("/tmp", `pr-shepherd-state-${process.getuid!()}`);
+}
+
+/** `"missing"` only when `create` is false and the directory does not exist yet. */
+function readLinuxUserStateBase(create: boolean): string | null | "missing" {
   if (process.platform !== "linux" || typeof process.getuid !== "function") return null;
   const uid = process.getuid();
-  const dir = join("/tmp", `pr-shepherd-state-${uid}`);
-  try {
-    mkdirSync(dir, { mode: 0o700 });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "EEXIST") return null;
+  const dir = sharedLinuxStateDir();
+  if (create) {
+    try {
+      mkdirSync(dir, { mode: 0o700 });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") return null;
+    }
   }
   try {
     const stat = lstatSync(dir);
     if (!stat.isDirectory() || stat.uid !== uid || (stat.mode & 0o022) !== 0) return null;
     accessSync(dir, constants.R_OK | constants.W_OK | constants.X_OK);
     return dir;
-  } catch {
-    return null;
+  } catch (err) {
+    return !create && (err as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : null;
   }
 }
 
@@ -38,7 +46,17 @@ export function resolveStateBase(): string {
   if (envDir) return envDir;
   const durable = resolveDurableStateBase();
   if (durable) return durable;
-  if (linuxUserStateBase === undefined) linuxUserStateBase = readLinuxUserStateBase();
+  if (linuxUserStateBase === undefined) {
+    // A read-only scope never creates the shared base. A missing base holds no state to read, so
+    // name it without caching the answer: the next writing call must still create it.
+    if (isReadOnly()) {
+      const base = readLinuxUserStateBase(false);
+      if (base === "missing") return sharedLinuxStateDir();
+      linuxUserStateBase = base;
+    } else {
+      linuxUserStateBase = readLinuxUserStateBase(true) as string | null;
+    }
+  }
   if (linuxUserStateBase) return linuxUserStateBase;
   return join(tmpdir(), "pr-shepherd-state");
 }

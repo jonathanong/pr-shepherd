@@ -8,9 +8,11 @@
  * the caller consumes it with `clearReadyDelay`.
  */
 
-import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { writeFile, mkdir, unlink } from "../state/guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "../state/base.mts";
+import { isReadOnly } from "../execution-context.mts";
 
 // ---------------------------------------------------------------------------
 // Ready-delay state machine
@@ -47,6 +49,8 @@ export async function updateReadyDelay(
 ): Promise<ReadyDelayState> {
   const markerPath = readySincePath(prNumber, owner, repo, options.summary);
 
+  if (isReadOnly()) return readOnlyReadyDelay(markerPath, isReady, readyDelaySeconds, options);
+
   if (!isReady) {
     // Reset the timer.
     await safeUnlink(markerPath);
@@ -79,6 +83,31 @@ export async function updateReadyDelay(
   }
 
   return { isReady: true, shouldCancel: false, remainingSeconds: remaining };
+}
+
+/**
+ * What the existing marker implies, without creating, refreshing or deleting it: no usable marker
+ * means the countdown has not started, so the full delay remains; a delay of 0 has elapsed at once.
+ */
+async function readOnlyReadyDelay(
+  markerPath: string,
+  isReady: boolean,
+  readyDelaySeconds: number,
+  options: { headSha: string; alreadyElapsed?: boolean },
+): Promise<ReadyDelayState> {
+  if (!isReady) return { isReady: false, shouldCancel: false, remainingSeconds: readyDelaySeconds };
+  if (options.alreadyElapsed || readyDelaySeconds <= 0) {
+    return { isReady: true, shouldCancel: true, remainingSeconds: 0 };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const readySince = await readReadySince(markerPath, options.headSha);
+  const remaining =
+    readySince === null || readySince > now
+      ? readyDelaySeconds
+      : readyDelaySeconds - (now - readySince);
+  return remaining <= 0
+    ? { isReady: true, shouldCancel: true, remainingSeconds: 0 }
+    : { isReady: true, shouldCancel: false, remainingSeconds: remaining };
 }
 
 /** Delete the ready-delay marker once an elapsed delay has been consumed. */

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "../state/guarded-fs.mts";
 import { join } from "node:path";
 import { resolvePrStatePath } from "../state/base.mts";
 import { resolveRestThreadRoot } from "../github/rest-identities.mts";

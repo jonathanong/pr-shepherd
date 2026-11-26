@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { assertRestReadable } from "./read-only-guard.mts";
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { loadEtagEntry, storeEtagEntry, type StateKey } from "../state/rest-cache.mts";
@@ -90,6 +91,7 @@ async function restAttempt<T>(
   body?: unknown,
   opts?: RestRequestOptions,
 ): Promise<RestResult<T>> {
+  assertRestReadable(method, path);
   const url = githubApiUrl(path);
   const n = nextEntry();
   appendEntry(formatRequestEntry({ n, kind: "REST", method, url, body }));

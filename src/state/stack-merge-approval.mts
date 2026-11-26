@@ -1,4 +1,5 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "./guarded-fs.mts";
 import { dirname } from "node:path";
 import { resolveStackStatePath } from "./base.mts";
 

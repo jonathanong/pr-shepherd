@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdir, writeFile } from "../state/guarded-fs.mts";
 import { join } from "node:path";
 import { resolveStateBase } from "../state/base.mts";
+import { isReadOnly } from "../execution-context.mts";
 import type { SeenMarker } from "../state/seen-comments.mts";
 import type { RepoInfo } from "./client.mts";
 import type { FixAttemptsState } from "../state/fix-attempts.mts";
@@ -31,7 +33,18 @@ export function restThreadId(rootCommentId: string | number): string {
   return `rest-thread-${numeric(rootCommentId)}`;
 }
 
+/**
+ * Identities recorded inside a read-only scope, keyed by their would-be file path. The scope writes
+ * nothing to disk, but later reads in the same tick (check annotations, thread aliases) still need
+ * the identities that tick fetched.
+ */
+const readOnlyIdentities = new Map<string, string>();
+
 async function storeIdentity(id: string, entry: RestIdentity): Promise<void> {
+  if (isReadOnly()) {
+    readOnlyIdentities.set(identityPath(id), JSON.stringify({ id, ...entry }));
+    return;
+  }
   await mkdir(join(resolveStateBase(), "github-identities"), { recursive: true });
   await writeFile(identityPath(id), JSON.stringify({ id, ...entry }));
 }
@@ -50,7 +63,9 @@ export async function recordRestIdentity(
 export async function resolveRestIdentity(id: string, kind?: IdentityKind): Promise<RestIdentity> {
   let entry: RestIdentity & { id: string };
   try {
-    entry = JSON.parse(await readFile(identityPath(id), "utf8")) as typeof entry;
+    const path = identityPath(id);
+    const recorded = isReadOnly() ? readOnlyIdentities.get(path) : undefined;
+    entry = JSON.parse(recorded ?? (await readFile(path, "utf8"))) as typeof entry;
   } catch {
     throw new Error(
       `No recorded REST identity for ${id}; refresh this PR with REST transport first`,

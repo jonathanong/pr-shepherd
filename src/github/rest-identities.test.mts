@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import { runReadOnly } from "../execution-context.mts";
 import { repo } from "../../test-helpers/github/rest-read.test-support.mts";
 import {
   aliasThreadFixAttempts,
@@ -65,5 +69,28 @@ describe("thread identity across transports", () => {
     await aliasThreadFixAttempts(repo, 101, ["rest-thread-11"], state);
     expect(state.threadAttempts["rest-thread-11"]).toBe(1);
     expect(state.threadBodyHashes!["rest-thread-11"]).toBe("body2");
+  });
+});
+
+describe("REST identities in a read-only scope", () => {
+  it("resolve within the scope without writing a file", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "shepherd-identities-"));
+    vi.stubEnv("PR_SHEPHERD_STATE_DIR", stateDir);
+    try {
+      await runReadOnly(async () => {
+        await recordRestIdentity(repo, 101, "ro-check-node", 78, "check");
+        expect(await resolveRestIdentity("ro-check-node", "check")).toMatchObject({
+          numericId: "78",
+          kind: "check",
+        });
+      });
+      expect(readdirSync(stateDir)).toEqual([]);
+      await expect(resolveRestIdentity("ro-check-node", "check")).rejects.toThrow(
+        "No recorded REST identity",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(stateDir, { recursive: true, force: true });
+    }
   });
 });

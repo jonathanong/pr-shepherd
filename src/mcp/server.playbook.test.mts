@@ -18,6 +18,7 @@ function toolsOf(iterate = vi.fn()) {
       iterate,
       apply: vi.fn(),
       stack: vi.fn(),
+      status: vi.fn(),
       suggest: vi.fn(),
       getJournal: vi.fn(),
     },

@@ -8,7 +8,10 @@
  * logging failed.
  */
 
-import { appendFileSync, mkdirSync } from "node:fs";
+import {
+  appendFileSyncGuarded as appendFileSync,
+  mkdirSyncGuarded as mkdirSync,
+} from "../state/guarded-fs.mts";
 import { dirname, join } from "node:path";
 import { resolveRepoStateDir } from "../state/base.mts";
 import { getWorktreeKey } from "../util/worktree.mts";

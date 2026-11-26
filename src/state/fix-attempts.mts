@@ -7,7 +7,8 @@
  * State lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/fix-attempts.json`.
  */
 
-import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { writeFile, rename, unlink, mkdir } from "./guarded-fs.mts";
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
