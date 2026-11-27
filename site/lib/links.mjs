@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractHeadings } from "./slug.mjs";
 
-const GITHUB_REPO = "jonathanong/pr-shepherd";
+const GITHUB_REPO = "jongleberry/pr-shepherd";
 const GITHUB_BRANCH = "main";
 
 function getBasePath() {
@@ -15,10 +15,9 @@ function getBasePath() {
 }
 
 function getOrigin() {
-  // jonathanong.github.io permanently 301s every project-page URL to jongleberry.com
-  // (the account's verified custom domain on its user Pages site), so canonical/OG/
-  // sitemap URLs point straight at the domain that actually serves the content.
-  return process.env.SITE_ORIGIN ?? "https://jongleberry.com";
+  // The repository moved to the jongleberry org, whose Pages site has no custom domain,
+  // so canonical/OG/sitemap URLs point at jongleberry.github.io, which serves the content.
+  return process.env.SITE_ORIGIN ?? "https://jongleberry.github.io";
 }
 
 /** @param {string} path an absolute site path, e.g. "/principles/" or "/style.css" */

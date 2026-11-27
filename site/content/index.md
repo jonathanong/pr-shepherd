@@ -60,10 +60,10 @@ summary 3 passing
 - [**It sees the whole PR**](docs/handled-cases.md) One call returns review threads, comments,
   CI failures with log excerpts when available, and the real merge requirements. It handles 79 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
-- [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
+- [**It costs less to run**](https://github.com/jongleberry/pr-shepherd/blob/main/evals/tokens/README.md)
   A modeled 34% lower cost per PR session than `gh` (30–38% across realistic context sizes), and
   75% lower than the GitHub MCP server, assuming a warm prompt cache.
-- [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
+- [**Your agent knows what to do next**](https://github.com/jongleberry/pr-shepherd/blob/main/evals/README.md)
   Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. Across 71 PR
   states, the agent scores 0.95 with the plugin and 0.57 with `gh` and the GitHub MCP server.
 - [**It's easy on your rate limit**](docs/github-api.md) A modeled PR session spends about
@@ -108,8 +108,8 @@ still decides what each comment deserves.
 **Claude Code**
 
 ```bash
-claude plugin marketplace add jonathanong/harness-plugins
-claude plugin install pr-shepherd@harness-plugins
+claude plugin marketplace add jongleberry/ratchet-stack
+claude plugin install pr-shepherd@ratchet-stack
 ```
 
 Previously added the `pr-shepherd` marketplace? Run `claude plugin marketplace remove pr-shepherd` first.
@@ -121,8 +121,8 @@ Previously added the `pr-shepherd` marketplace? Run `claude plugin marketplace r
 **Codex**
 
 ```bash
-codex plugin marketplace add jonathanong/harness-plugins --ref main
-codex plugin add pr-shepherd@harness-plugins
+codex plugin marketplace add jongleberry/ratchet-stack --ref main
+codex plugin add pr-shepherd@ratchet-stack
 ```
 
 Previously added the `pr-shepherd` marketplace? Run `codex plugin remove pr-shepherd@pr-shepherd` and `codex plugin marketplace remove pr-shepherd` first.
@@ -134,7 +134,7 @@ Previously added the `pr-shepherd` marketplace? Run `codex plugin remove pr-shep
 **Grok**
 
 ```bash
-grok plugin marketplace add jonathanong/pr-shepherd
+grok plugin marketplace add jongleberry/pr-shepherd
 grok plugin install pr-shepherd --trust
 ```
 
@@ -171,6 +171,6 @@ Claude Code.
 
 - [**README**](README.md) Benefits, with links to the evidence behind each number, plus usage and install.
 - [**Principles**](/principles/) The beliefs behind the design.
-- [**GitHub**](https://github.com/jonathanong/pr-shepherd) Source, issues, and releases.
+- [**GitHub**](https://github.com/jongleberry/pr-shepherd) Source, issues, and releases.
 
 </div>

@@ -12,15 +12,15 @@
     "github",
     "pull-request"
   ],
-  "homepage": "https://jongleberry.com/pr-shepherd/",
+  "homepage": "https://jongleberry.github.io/pr-shepherd/",
   "bugs": {
-    "url": "https://github.com/jonathanong/pr-shepherd/issues"
+    "url": "https://github.com/jongleberry/pr-shepherd/issues"
   },
   "license": "MIT",
   "author": "Jonathan Ong",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jonathanong/pr-shepherd.git"
+    "url": "git+https://github.com/jongleberry/pr-shepherd.git"
   },
   "bin": {
     "pr-shepherd": "bin/index.mjs",
