@@ -119,6 +119,6 @@ Requirements:
 - [Configuration](docs/configuration.md) and [comparison with other tools](docs/comparison.md)
 - [Upgrading from 0.x](docs/migrating-to-v1.md)
 
-## Harness ecosystem
+## ratchet-stack
 
 pr-shepherd is part of [ratchet-stack](https://github.com/jongleberry/ratchet-stack), a set of plugins and tools for autonomous coding agents.
