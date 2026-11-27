@@ -19,7 +19,9 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 > from the kept traces. The intervals resample scenarios and runs. Scenarios 77
 > and 78 were added after that run, and 76 was in it. 78 was run twice
 > afterwards (1.00 / 1.00 both times, so it is a regression guard and adds nothing
-> to the headline); the figures here do not include it.
+> to the headline); the figures here do not include it. 79 was added on
+> 2026-11-26 and has only a targeted run (see [HISTORY.md](HISTORY.md)); it is a
+> regression guard and is not in these figures either.
 >
 > Four partial reruns followed the same day (A to D, 3 runs per arm, 35, 6, 2
 > and 4 scenarios). Each scenario's latest figure is in [EVALS.md](EVALS.md).

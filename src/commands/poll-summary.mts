@@ -361,6 +361,7 @@ function attachUsage(
       scope !== undefined,
       aggregateRerunCommand(enriched.repo, enriched.selection, opts),
       scope,
+      (extra) => stackApprovalCommands(enriched.repo, enriched.selection, opts, extra),
     ),
   );
 }

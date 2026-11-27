@@ -26,6 +26,7 @@ import {
   escalation,
   list,
   scopeDone,
+  unlistedAboveStep,
   unlistedEscalation,
   type ApproveCommands,
 } from "./stack-merge-escalations.mts";
@@ -54,7 +55,7 @@ export function planStackMerge(
     if (added) return added;
     const prefix = readyPrefix(result, true);
     const top = prefix.at(-1);
-    if (top) return mergePlan(result, top, scope, rerunCommand);
+    if (top) return mergePlan(result, top, scope, rerunCommand, approve);
     const bottom = open.reduce((low, item) =>
       stackPosition(item) < stackPosition(low) ? item : low,
     );
@@ -82,7 +83,7 @@ export function planStackMerge(
   );
   if (unowned.length > 0) return unlistedEscalation(target, unowned, rerunCommand, approve);
   return readyPrefix(result, false).some((item) => item.pr === target.pr)
-    ? mergePlan(result, target as StackLayer, scope, rerunCommand)
+    ? mergePlan(result, target as StackLayer, scope, rerunCommand, approve)
     : undefined;
 }
 
@@ -92,6 +93,7 @@ function mergePlan(
   top: PollSummaryItem,
   scope: StackMergeScope,
   rerunCommand?: string,
+  approve?: ApproveCommands,
 ): StackPlan {
   const stack = top.stack!;
   const outside = aboveThroughTarget(result, scope);
@@ -124,8 +126,12 @@ function mergePlan(
     const waiting = idleWaitPlan(lands);
     return { ...waiting, instructions: [`1. ${first.unavailable}`] };
   }
-  const check = trunkPreCheck(result, top);
-  const instructions = check ? [`1. ${check}`, `2. ${first.text}`] : [`1. ${first.text}`];
+  const steps = [
+    partial && scope.kind === "all" ? unlistedAboveStep(above, rerunCommand, approve) : undefined,
+    trunkPreCheck(result, top),
+    first.text,
+  ].filter((step): step is string => step !== undefined);
+  const instructions = steps.map((step, index) => `${index + 1}. ${step}`);
   appendAutonomousInstructions(instructions, work.sessions, hasListedOwnership(result));
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);

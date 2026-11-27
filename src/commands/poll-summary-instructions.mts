@@ -35,8 +35,9 @@ export function withPollSummaryInstructions(
   mergeRequested: boolean,
   rerunCommand?: string,
   scope?: StackMergeScope,
+  approve?: ApproveCommands,
 ): PollSummaryResult {
-  return planPollSummary(result, mergeRequested, rerunCommand, scope).result;
+  return planPollSummary(result, mergeRequested, rerunCommand, scope, approve).result;
 }
 
 /** The projected summary, plus the idle layers when the stack plan can only wait on them. */

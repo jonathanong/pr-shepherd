@@ -1,0 +1,70 @@
+{
+  "description": "Issue 834: the caller listed only the bottom PR #621 with `--merge`, and #622 above it is not listed. The merge lands #621 alone, so the instructions first name #622 and print the commands that list it too or name the stack number, for a request that covers the whole stack.",
+  "mode": "aggregate",
+  "args": [
+    "stack",
+    "https://github.com/owner/repo/pull/621",
+    "--merge",
+    "--debounce",
+    "0s"
+  ],
+  "expectedExitCode": 15,
+  "expectedNextAction": "merge",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 621,
+      "stackNumber": 62,
+      "stackSize": 2
+    },
+    "prs": [
+      {
+        "pr": 621,
+        "repo": "owner/repo",
+        "title": "Layer 1",
+        "url": "https://github.com/owner/repo/pull/621",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-621",
+        "headRefOid": "6216216216216216216216216216216216216216",
+        "baseRefName": "main",
+        "stack": {
+          "number": 62,
+          "size": 2,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 622,
+        "repo": "owner/repo",
+        "title": "Layer 2",
+        "url": "https://github.com/owner/repo/pull/622",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-622",
+        "headRefOid": "6226226226226226226226226226226226226226",
+        "baseRefName": "layer-621",
+        "stack": {
+          "number": 62,
+          "size": 2,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      }
+    ]
+  }
+}

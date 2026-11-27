@@ -93,6 +93,7 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `76-merge-one-pr-unlisted-lower-asks`          | `186`   | "Merge #613" with #611/#612 unlisted: report them and ask, merge nothing                       |
 | `77-merge-non-stack-pr-plain-merge`            | —       | "Merge #42" on a non-stack PR: the plain one-PR `--merge`, not `stack`                         |
 | `78-merge-whole-stack-uses-printed-stack-number`| `186`   | "Merge the whole stack": rerun with the printed stack number or every layer                    |
+| `79-merge-whole-stack-bottom-anchor-relists`   | `216`   | "Merge the whole stack" from the bottom PR: rerun listing both layers, not `gh stack merge 621` |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
