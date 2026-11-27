@@ -189,7 +189,7 @@ Where the content comes from:
   arms pay for each layer.
 - **Real data** (`data/`, all public):
   - A 194 KB failed Actions log from this repository.
-  - The review history of [jonathanong/pr-shepherd#505](https://github.com/jonathanong/pr-shepherd/pull/505):
+  - The review history of [jongleberry/pr-shepherd#505](https://github.com/jongleberry/pr-shepherd/pull/505):
     three bot reviewers, two resolved threads and 28 KB of bot comments.
   - github-mcp-server's own tool-definition snapshots.
 
