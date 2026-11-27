@@ -84,15 +84,15 @@ The plugin ships the skills, which drive the CLI, so install both.
 
 ```bash
 # Claude Code
-claude plugin marketplace add jonathanong/harness-plugins
-claude plugin install pr-shepherd@harness-plugins
+claude plugin marketplace add jongleberry/ratchet-stack
+claude plugin install pr-shepherd@ratchet-stack
 
 # Codex
-codex plugin marketplace add jonathanong/harness-plugins --ref main
-codex plugin add pr-shepherd@harness-plugins
+codex plugin marketplace add jongleberry/ratchet-stack --ref main
+codex plugin add pr-shepherd@ratchet-stack
 
 # Grok
-grok plugin marketplace add jonathanong/pr-shepherd
+grok plugin marketplace add jongleberry/pr-shepherd
 grok plugin install pr-shepherd --trust
 
 # CLI, for shells and CI

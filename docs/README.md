@@ -1,6 +1,6 @@
 # pr-shepherd reference documentation
 
-Canonical spec for Shepherd, grouped by outcome. The [README](../README.md) and the [site](https://jongleberry.com/pr-shepherd/) are for people evaluating or installing it; these docs are for agents and contributors: exact contracts, predicates, and numbers.
+Canonical spec for Shepherd, grouped by outcome. The [README](../README.md) and the [site](https://jongleberry.github.io/pr-shepherd/) are for people evaluating or installing it; these docs are for agents and contributors: exact contracts, predicates, and numbers.
 
 ## Overview
 

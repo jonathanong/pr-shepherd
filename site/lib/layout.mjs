@@ -58,9 +58,9 @@ function renderNav(nav, page) {
     .join("\n");
   return (
     `${items}\n` +
-    `<a href="https://github.com/jonathanong/pr-shepherd/tree/main/docs" ` +
+    `<a href="https://github.com/jongleberry/pr-shepherd/tree/main/docs" ` +
     `target="_blank" rel="noopener noreferrer">Docs</a>\n` +
-    `<a href="https://github.com/jonathanong/pr-shepherd" target="_blank" ` +
+    `<a href="https://github.com/jongleberry/pr-shepherd" target="_blank" ` +
     `rel="noopener noreferrer">GitHub</a>`
   );
 }
@@ -128,7 +128,7 @@ ${renderDocsFooter(docsLinks)}
 </main>
 <footer class="site-footer">
   <p>pr-shepherd v${siteMeta.version} · MIT licensed ·
-  <a href="https://github.com/jonathanong/pr-shepherd" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+  <a href="https://github.com/jongleberry/pr-shepherd" target="_blank" rel="noopener noreferrer">GitHub</a> ·
   <a href="https://www.npmjs.com/package/pr-shepherd" target="_blank" rel="noopener noreferrer">npm</a> ·
   <a href="${withBase("/llms.txt")}">llms.txt</a></p>
 </footer>

@@ -14,7 +14,7 @@ Work through these steps in order. Skip any the request clearly does not need. `
 2. Match first against the bundled `classify.standard` rules and the existing config. Propose a custom rule only for what they do not cover. See [bot-comment classifiers](references/classifiers.md).
 3. Ask the user, in plain words, whether to put the config and any custom rules in this repository (`.pr-shepherdrc.yml`, `.pr-shepherd/classification/`) or in their own user configuration (`~/.pr-shepherdrc.yml`). Wait for the answer before writing files. Shared policy belongs in the repository; personal preferences belong in the home file.
 4. Configure with the smallest change that fits: `classify.standard`, `checks.never-cancel` for code-review workflows, and the polling, log, and comment-visibility settings in [noise settings](references/settings.md). Validate the result: Shepherd checks config before any GitHub call and exits 78 with the offending key on an invalid file, so a run against an open PR (or `pr-shepherd iterate <PR>`) confirms the file loads.
-5. If a recurring bot comment is common enough to belong in the bundled set, offer to file an issue or open a PR on jonathanong/pr-shepherd. Only proceed with the user's OK; see [upstreaming a standard rule](references/upstream-standard-rule.md).
+5. If a recurring bot comment is common enough to belong in the bundled set, offer to file an issue or open a PR on jongleberry/pr-shepherd. Only proceed with the user's OK; see [upstreaming a standard rule](references/upstream-standard-rule.md).
 
 If the user asks only how to configure something, answer without editing files.
 

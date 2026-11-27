@@ -7,8 +7,8 @@
     "email": "jonathanrichardong@gmail.com",
     "url": "https://github.com/jonathanong"
   },
-  "homepage": "https://github.com/jonathanong/pr-shepherd",
-  "repository": "https://github.com/jonathanong/pr-shepherd",
+  "homepage": "https://github.com/jongleberry/pr-shepherd",
+  "repository": "https://github.com/jongleberry/pr-shepherd",
   "license": "MIT",
   "keywords": ["github", "pull-request", "ci", "code-review", "automation", "codex"],
   "skills": "./skills/",
@@ -19,9 +19,9 @@
     "developerName": "Jonathan Ong",
     "category": "Coding",
     "capabilities": ["Interactive", "Write"],
-    "websiteURL": "https://github.com/jonathanong/pr-shepherd",
-    "privacyPolicyURL": "https://github.com/jonathanong/pr-shepherd",
-    "termsOfServiceURL": "https://github.com/jonathanong/pr-shepherd",
+    "websiteURL": "https://github.com/jongleberry/pr-shepherd",
+    "privacyPolicyURL": "https://github.com/jongleberry/pr-shepherd",
+    "termsOfServiceURL": "https://github.com/jongleberry/pr-shepherd",
     "defaultPrompt": [
       "Check this PR with pr-shepherd",
       "Run pr-shepherd until this PR is ready",

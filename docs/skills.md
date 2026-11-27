@@ -93,8 +93,8 @@ Merge and stacks:
 ## Claude Code
 
 ```bash
-claude plugin marketplace add jonathanong/harness-plugins
-claude plugin install pr-shepherd@harness-plugins
+claude plugin marketplace add jongleberry/ratchet-stack
+claude plugin install pr-shepherd@ratchet-stack
 ```
 
 If you added the old `pr-shepherd` marketplace, remove it first (Claude Code uninstalls its plugins), then install as above:
@@ -119,8 +119,8 @@ The goal loop handles recurrence. `[CANCEL]` and `[ESCALATE]` stop that PR's loo
 Add the shared marketplace from GitHub and install the plugin:
 
 ```sh
-codex plugin marketplace add jonathanong/harness-plugins --ref main
-codex plugin add pr-shepherd@harness-plugins
+codex plugin marketplace add jongleberry/ratchet-stack --ref main
+codex plugin add pr-shepherd@ratchet-stack
 ```
 
 If you added the old `pr-shepherd` marketplace, Codex keeps its plugin enabled, so remove it first:
@@ -142,7 +142,7 @@ $setup-pr-shepherd set up pr-shepherd for this repo
 ## Grok
 
 ```bash
-grok plugin marketplace add jonathanong/pr-shepherd
+grok plugin marketplace add jongleberry/pr-shepherd
 grok plugin install pr-shepherd --trust
 ```
 

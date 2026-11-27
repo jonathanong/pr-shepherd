@@ -44,7 +44,7 @@ export function buildLlmsTxt(pages) {
   lines.push(
     "## Full specification",
     "",
-    "- [docs/](https://github.com/jonathanong/pr-shepherd/tree/main/docs): " +
+    "- [docs/](https://github.com/jongleberry/pr-shepherd/tree/main/docs): " +
       "the canonical, exhaustive spec this site links out to for every claim.",
     "",
   );
