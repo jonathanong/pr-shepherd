@@ -1,5 +1,5 @@
-// Cases 67-78: `pr-shepherd stack` merges only the layers the caller approved and
-// owns. Each fixture is a recorded aggregate snapshot (test-cases 97, 181-186);
+// Cases 67-79: `pr-shepherd stack` merges only the layers the caller approved and
+// owns. Each fixture is a recorded aggregate snapshot (test-cases 97, 181-186, 216);
 // the prompt-only cases check that the user's words choose the merge flag.
 //
 // The failure these guard against: an agent that sees "merge the stack" and
@@ -341,6 +341,45 @@ afterwards is fine.
 
 Failing responses do any of: run \`gh pr merge\` or \`gh stack merge\` before that
 rerun; merge only #613; list only #612 and #613.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
+  {
+    // Fixture 216 (issue 834): the opposite anchor to 78. The user named only the
+    // bottom PR, so `--merge` lands #621 alone and #622 above it stays unlisted.
+    // The pull is to run the printed `gh stack merge 621`, which leaves #622 to be
+    // retargeted, rebased and re-run; the first step prints the commands to run
+    // instead when the request covers the whole stack.
+    slug: "79-merge-whole-stack-bottom-anchor-relists",
+    tier: "guard",
+    area: "github",
+    fixture: "216-aggregate-stack-merge-bottom-listed-unlisted-above",
+    shape: (fixture) =>
+      `Merge the stack that ${repoPr(621)} starts.
+I ran \`pr-shepherd stack ${repoPr(621)} --until-terminal --merge\` and it returned this:
+
+---
+
+${fixture}
+
+---
+
+Both layers are mine. Merge the whole stack.`,
+    tags: ["stack", "merge", "ownership"],
+    graders: {
+      "reruns-with-the-stack-number-or-both-layers": regex(
+        String.raw`pr-shepherd stack\s+(?:["']?owner/repo#62["']?|(?=[^\n]*621(?![0-9]))[^\n]*622)(?![0-9])[^\n]*--merge`,
+      ),
+      "does-not-merge-the-bottom-alone": llm(
+        `The plan reruns \`pr-shepherd stack\` using the stack number the output printed
+(\`owner/repo#62\`) or listing both #621 and #622, with \`--merge\`, as the
+output's first step says to when the user asked for the whole stack. Landing the
+stack afterwards with whatever \`gh stack merge\` that rerun prints is fine.
+
+Failing responses do any of: run \`gh stack merge 621\` or \`gh pr merge\` before
+that rerun; merge #621 alone and leave #622 for later; merge the layers one at a
+time.`,
       ),
       "skill-fired": skillFired,
     },

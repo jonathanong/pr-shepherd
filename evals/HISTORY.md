@@ -6,6 +6,17 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-26: scenario 79 against the old and new stack output (issue 834)
+
+One targeted run of `79-merge-whole-stack-bottom-anchor-relists` together with a temporary copy, `79b`, whose embedded output was fixture 216 with the new first step removed: the instructions `stack <bottom PR> --merge` printed before the fix. Sonnet 5.5 at low effort, opus judge, 3 runs per arm, `--ablation with-without`, $0.98 over 12 runs. The `79b` copy was deleted after the run, and the results directory is not kept in the repository.
+
+| Output | Plugin | gh/MCP | Δ |
+| --- | --- | --- | --- |
+| before the fix (`79b`) | 0.50 | 0.00 | +0.50 |
+| after the fix (`79`) | 1.00 | 1.00 | 0.00 |
+
+Before the fix, every baseline run and one plugin run ran the printed `gh stack merge 621` and left #622 for later, which is the mistake in issue 834. The other two plugin runs reran with the stack number, but as `'owner/repo#62'` in single quotes, which the regex grader did not accept, so they scored 0.5. The regex was widened to accept single quotes after the run, which changes the scored fingerprint; rescored by hand, the plugin arm before the fix is 0.83. After the fix, all six runs reran with both layers listed or with the stack number before any merge. 79 is tagged a regression guard: both arms are at the ceiling with the new output.
+
 ## 2026-11-23: scenario 78 before and after the skill fix (rerun E)
 
 Two runs of `78-stack-named-no-merge-request` only, Sonnet 5.5 at low effort, opus judge, 3 runs per arm, `--ablation with-without`. Isolation passed, 0 mock tool errors, exit 0. Directories are under `/private/tmp` and are not kept in the repository.
