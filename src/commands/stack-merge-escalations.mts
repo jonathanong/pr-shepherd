@@ -37,6 +37,27 @@ export function unlistedEscalation(
   );
 }
 
+/**
+ * `--merge` with listed PRs leaves unlisted layers above the merge open. The
+ * caller may have listed only the bottom PR of a stack it was asked to merge whole, so the step
+ * names those layers and prints the command that lands them in the same merge.
+ */
+export function unlistedAboveStep(
+  above: PollSummaryItem[],
+  rerunCommand: string | undefined,
+  approve: ApproveCommands | undefined,
+): string | undefined {
+  const unlisted = above.filter((item) => !item.owned);
+  if (unlisted.length === 0) return undefined;
+  const one = unlisted.length === 1;
+  const names = list(unlisted);
+  const commands = approve?.(unlisted.map((item) => item.pr));
+  const instead = commands
+    ? `run \`${commands.listed}\` instead (or \`${commands.whole}\`; the stack number owns every layer)`
+    : `rerun ${stackRerunTarget(rerunCommand)} with ${one ? "it" : "them"} listed after \`stack\` instead`;
+  return `${names} ${one ? "sits" : "sit"} above this merge and ${one ? "is" : "are"} not listed after \`stack\`, so the merge below leaves ${one ? "it" : "them"} open and GitHub retargets ${one ? "it" : "them"} onto the trunk, which needs another rebase and CI run. "Not listed" is about this command line, not authorship. If the user asked to merge the whole stack or ${names} too, do not run the merge below: ${instead}, which lands every layer in one command. Otherwise continue with the merge.`;
+}
+
 export const list = (items: PollSummaryItem[]): string => items.map((i) => `#${i.pr}`).join(", ");
 
 /** Layers that joined the stack after the merge was requested: the request never covered them. */

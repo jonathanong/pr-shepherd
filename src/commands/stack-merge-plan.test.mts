@@ -53,6 +53,41 @@ describe("planStackMerge --merge", () => {
   });
 });
 
+describe("planStackMerge with unlisted layers above the merge", () => {
+  const approve = (extra: number[]) => ({
+    listed: `pr-shepherd stack ${[1, ...extra].join(" ")} --merge`,
+    whole: "pr-shepherd stack acme/widgets#9 --merge",
+  });
+
+  it("names them and prints the command that lands the whole stack when the bottom PR is listed", () => {
+    const result = listed(stack([row(1, 1, ready), row(2, 2, ready)]), [1]);
+    const merge = planStackMerge(result, ALL, RERUN, approve)!;
+    expect(merge.action).toBe("merge");
+    const [note, step] = merge.instructions;
+    expect(note).toMatch(/^1\. #2 sits above this merge and is not listed after `stack`/);
+    expect(note).toContain("If the user asked to merge the whole stack or #2 too");
+    expect(note).toContain("run `pr-shepherd stack 1 2 --merge` instead");
+    expect(note).toContain("`pr-shepherd stack acme/widgets#9 --merge`");
+    expect(step).toMatch(/^2\. Run `GH_REPO=.* gh stack merge 1 /);
+  });
+
+  it("falls back to the rerun target without approval commands", () => {
+    const result = listed(stack([row(1, 1, ready), row(2, 2), row(3, 3)]), [1]);
+    const [note] = plan(result, ALL)!.instructions;
+    expect(note).toContain("#2, #3 sit above this merge and are not listed");
+    expect(note).toContain("with them listed after `stack` instead");
+  });
+
+  it("adds nothing with whole-stack ownership, --merge-ready or a --merge-through target", () => {
+    const whole = plan(stack([row(1, 1, ready), row(2, 2)]), { kind: "ready" })!;
+    expect(whole.instructions[0]).toMatch(/^1\. Run /);
+    const drain = plan(listed(stack([row(1, 1, ready), row(2, 2)]), [1]), { kind: "ready" })!;
+    expect(drain.instructions[0]).toMatch(/^1\. Run /);
+    const bounded = plan(listed(stack([row(1, 1, ready), row(2, 2)]), [1]), through(1))!;
+    expect(bounded.instructions[0]).toMatch(/^1\. Run /);
+  });
+});
+
 describe("planStackMerge --merge-through", () => {
   it("merges up to the target and notes the layers left open above it", () => {
     const result = plan(stack([row(1, 1, ready), row(2, 2, ready), row(3, 3)]), through(2));
