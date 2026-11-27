@@ -121,6 +121,6 @@ Requirements:
 
 ## Harness ecosystem
 
-- [hook-harness](https://github.com/jonathanong/hook-harness): GitHub webhook relay that agents poll for events instead of polling GitHub
-- [agent-blackboard](https://github.com/jonathanong/agent-blackboard): session-scoped telemetry for autonomous agents
-- [no-mistakes](https://github.com/jonathanong/no-mistakes): deterministic AST-based codebase intelligence, test selection, and linting for agents
+- [hook-harness](https://github.com/jongleberry/hook-harness): GitHub webhook relay that agents poll for events instead of polling GitHub
+- [agent-blackboard](https://github.com/jongleberry/agent-blackboard): session-scoped telemetry for autonomous agents
+- [no-mistakes](https://github.com/jongleberry/no-mistakes): deterministic AST-based codebase intelligence, test selection, and linting for agents
