@@ -1,6 +1,6 @@
 # Event-driven waits with hook-harness
 
-By default a poll sleeps `poll.interval-seconds` between ticks. With [hook-harness](https://github.com/jonathanong/hook-harness) as an event source, the poll instead waits for a GitHub webhook event that concerns the PR, then runs a normal tick. Quiet PRs cost fewer GitHub calls, and a push or check result is noticed within seconds rather than at the next interval.
+By default a poll sleeps `poll.interval-seconds` between ticks. With [hook-harness](https://github.com/jongleberry/hook-harness) as an event source, the poll instead waits for a GitHub webhook event that concerns the PR, then runs a normal tick. Quiet PRs cost fewer GitHub calls, and a push or check result is noticed within seconds rather than at the next interval.
 
 This is opt-in and changes only when ticks happen; output, JSON, exit codes, and mutations are unchanged. It reduces how many ticks run; a [GitHub App](github-app.md) reduces what each tick costs your token. The two combine.
 
