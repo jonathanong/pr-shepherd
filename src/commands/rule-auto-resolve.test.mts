@@ -30,6 +30,7 @@ function partition(overrides: Partial<BatchPartition> = {}): BatchPartition {
   return {
     suppressedCommentIds: new Set(),
     suppressedThreadIds: new Set(),
+    suppressedThreadReplyIds: new Set(),
     suppressedReviewSummaryIds: new Set(),
     suppressedChangesRequestedIds: new Set(),
     ruleAutoResolveCommentIds: [],

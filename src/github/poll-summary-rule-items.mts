@@ -22,6 +22,7 @@ export function summaryRuleAction(
   id = raw?.id ?? "unknown",
   path?: string | null,
   body = raw?.body ?? "",
+  threadId?: string,
 ): ClassifyAction {
   const item = {
     kind,
@@ -35,7 +36,8 @@ export function summaryRuleAction(
     ...(kind !== "review-thread" && kind !== "changes-requested" && raw?.url
       ? { url: raw.url }
       : {}),
-    ...(kind === "review-thread" && { path }),
+    ...((kind === "review-thread" || kind === "review-thread-reply") && { path }),
+    ...(kind === "review-thread-reply" && threadId !== undefined && { threadId }),
   } as ClassifyItem;
   return applyRules(rules, item);
 }

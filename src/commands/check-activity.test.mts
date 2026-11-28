@@ -20,6 +20,7 @@ const item = (
 const partition = {
   suppressedCommentIds: new Set(["c1", "c-denied"]),
   suppressedThreadIds: new Set(["t1"]),
+  suppressedThreadReplyIds: new Set(["tc-reply-noise"]),
   suppressedReviewSummaryIds: new Set(["s1"]),
   suppressedChangesRequestedIds: new Set(["cr1"]),
 } as unknown as BatchPartition;
@@ -34,6 +35,7 @@ const activity: PrActivitySummary = {
     item("pr-comment", "c2"),
     item("review-thread-comment", "tc1", { threadId: "t1" }),
     item("review-thread-comment", "tc2", { threadId: "t2" }),
+    item("review-thread-comment", "tc-reply-noise", { threadId: "t2" }),
     item("review-thread-comment", "tc3"),
     item("review-summary", "s1"),
     item("review-summary", "s2"),

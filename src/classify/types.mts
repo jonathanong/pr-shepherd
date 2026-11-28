@@ -11,6 +11,7 @@ export type CommentAuthorAssociation =
 
 export type ClassifyItemKind =
   | "review-thread"
+  | "review-thread-reply"
   | "pr-comment"
   | "review-summary"
   | "changes-requested";
@@ -30,6 +31,12 @@ export interface ClassifyReviewThread extends ClassifyItemBase {
   readonly path?: string | null;
 }
 
+export interface ClassifyReviewThreadReply extends ClassifyItemBase {
+  readonly kind: "review-thread-reply";
+  readonly threadId: string;
+  readonly path?: string | null;
+}
+
 export interface ClassifyPrComment extends ClassifyItemBase {
   readonly kind: "pr-comment";
 }
@@ -44,12 +51,13 @@ export interface ClassifyChangesRequested extends ClassifyItemBase {
 
 export type ClassifyItem =
   | ClassifyReviewThread
+  | ClassifyReviewThreadReply
   | ClassifyPrComment
   | ClassifyReviewSummary
   | ClassifyChangesRequested;
 
 export interface ClassifyAction {
-  /** When true, routes the item's ID to the appropriate resolve/minimize GitHub mutation. Not supported for changes-requested reviews. */
+  /** When true, routes the item's ID to the appropriate resolve/minimize GitHub mutation. Not supported for changes-requested reviews or review-thread replies. */
   readonly autoResolve?: boolean;
   /** When true, hides the item from agent output (seen marker is still written). */
   readonly suppress?: boolean;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyRules, buildClassifyIndex, partitionBatch } from "./apply.mts";
+import {
+  applyRules,
+  buildClassifyIndex,
+  partitionBatch,
+  stripSuppressedThreadReplies,
+} from "./apply.mts";
 import type { LoadedRule } from "./loader.mts";
 import type { BatchPrData } from "../types.mts";
 import type { ClassifyItem } from "./types.mts";
@@ -333,5 +338,69 @@ describe("partitionBatch", () => {
     const p = partitionBatch(idx, batch);
     expect(p.ruleAutoResolveCommentIds).toContain("c-open");
     expect(p.ruleAutoResolveCommentIds).not.toContain("c-min");
+  });
+
+  it("suppresses matching review-thread replies without suppressing or auto-resolving the parent thread", () => {
+    const seen: ClassifyItem[] = [];
+    const rule = makeRule("reply-noise", (item) => {
+      seen.push(item);
+      if (item.kind === "review-thread-reply" && item.body === "rate limit") {
+        return { suppress: true, autoResolve: true, reason: "rate-limit reply" };
+      }
+      return null;
+    });
+    const thread = {
+      ...makeThread("t1", "coderabbitai", "real finding"),
+      comments: [
+        {
+          id: "rc-root",
+          author: "coderabbitai",
+          authorType: "Bot" as const,
+          body: "real finding",
+          url: "https://github.com/t/t1#r1",
+          createdAtUnix: 1,
+        },
+        {
+          id: "rc-shepherd",
+          author: "agent",
+          authorType: "User" as const,
+          body: "<!-- pr-shepherd -->\nFixed.",
+          url: "https://github.com/t/t1#r2",
+          createdAtUnix: 2,
+        },
+        {
+          id: "rc-noise",
+          author: "coderabbitai",
+          authorType: "Bot" as const,
+          authorAssociation: "NONE" as const,
+          body: "rate limit",
+          url: "https://github.com/t/t1#r3",
+          createdAtUnix: 3,
+        },
+      ],
+    };
+    const batch = makeBatch({ reviewThreads: [thread] });
+    const idx = buildClassifyIndex([rule], batch);
+    const p = partitionBatch(idx, batch);
+
+    expect(p.suppressedThreadIds.has("t1")).toBe(false);
+    expect(p.ruleAutoResolveThreadIds).toEqual([]);
+    expect(idx.autoResolveIds.has("rc-noise")).toBe(false);
+    expect(p.suppressedThreadReplyIds).toEqual(new Set(["rc-noise"]));
+    expect(p.ruleReasons.get("rc-noise")).toEqual(["rate-limit reply"]);
+    expect(seen.find((item) => item.id === "rc-noise")).toEqual({
+      kind: "review-thread-reply",
+      id: "rc-noise",
+      threadId: "t1",
+      author: "coderabbitai",
+      authorType: "Bot",
+      authorAssociation: "NONE",
+      body: "rate limit",
+      url: "https://github.com/t/t1#r3",
+      path: "file.ts",
+    });
+
+    const stripped = stripSuppressedThreadReplies([thread], p.suppressedThreadReplyIds);
+    expect(stripped[0]?.comments?.map((c) => c.id)).toEqual(["rc-root", "rc-shepherd"]);
   });
 });
