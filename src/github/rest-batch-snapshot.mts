@@ -10,6 +10,7 @@ import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { parseCheckNodes } from "./batch-parse-checks.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
 import { isReviewStale } from "./batch-parser-helpers.mts";
+import { findSupersededApprovalIds } from "../comments/superseded-approvals.mts";
 import { readRest as rest, restRepoPath, restObject, restString } from "./rest-reader-core.mts";
 import { restLatestReviews, restPendingReviews } from "./rest-review-read.mts";
 import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
@@ -96,11 +97,44 @@ export async function readRestSnapshot(
       return mapped;
     }),
     reviewSummaries: feedback.reviews
-      .filter((review) => review.state === "COMMENTED" && review.body?.trim())
+      .filter(
+        (review) =>
+          (review.state === "COMMENTED" || review.state === "DISMISSED") && review.body?.trim(),
+      )
       .map(restReviewToReview),
     approvedReviews: feedback.reviews
       .filter((review) => review.state === "APPROVED")
       .map(restReviewToReview),
+    ...(() => {
+      const supersededApprovalIds = [
+        ...findSupersededApprovalIds({
+          reviews: feedback.reviews
+            .filter(
+              (
+                review,
+              ): review is typeof review & {
+                state: "APPROVED" | "CHANGES_REQUESTED" | "DISMISSED" | "COMMENTED";
+              } =>
+                review.state === "APPROVED" ||
+                review.state === "CHANGES_REQUESTED" ||
+                review.state === "DISMISSED" ||
+                review.state === "COMMENTED",
+            )
+            .map((review) => {
+              const mapped = restReviewToReview(review);
+              return {
+                id: mapped.id,
+                author: mapped.author,
+                state: review.state,
+                body: mapped.body,
+                createdAtUnix: mapped.createdAtUnix,
+              };
+            }),
+          latestReviews: [...latestReviews.values()],
+        }),
+      ];
+      return supersededApprovalIds.length > 0 ? { supersededApprovalIds } : {};
+    })(),
     checks: mergeStartupFailureChecks(
       parseCheckNodes(checks.nodes),
       checks.suites.flatMap((suite) => {

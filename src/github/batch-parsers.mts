@@ -26,6 +26,7 @@ import { headFreshAtUnix } from "./head-freshness.mts";
 import { headPushUnixFromCheckNodes } from "./queue-removal-freshness.mts";
 import { contextNodes } from "./batch-response.mts";
 import { buildPrActivitySummary } from "./activity.mts";
+import { findSupersededApprovalIds } from "../comments/superseded-approvals.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
 import { readAllowedMergeMethods } from "../config/merge-method.mts";
 import {
@@ -42,6 +43,7 @@ function parseReviewNode(r: RawReview | RawReviewSummary): Review {
     author: r.author?.login ?? "unknown",
     authorType: mapAuthorType(r.author?.__typename, r.author?.login),
     ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
+    ...("isMinimized" in r && r.isMinimized === true && { isMinimized: true }),
     viewerCanMinimize: "viewerCanMinimize" in r && r.viewerCanMinimize === true,
     body: r.body,
     createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
@@ -159,6 +161,34 @@ export function parseRawPr(
   const approvedReviews: Review[] = rawApprovedReviewNodes
     .filter((r) => !r.isMinimized)
     .map((r) => parseReviewNode(r));
+  const supersededApprovalIds = [
+    ...findSupersededApprovalIds({
+      reviews: [
+        ...rawApprovedReviewNodes.map((r) => ({
+          id: r.id,
+          author: r.author?.login ?? "unknown",
+          state: "APPROVED" as const,
+          body: r.body,
+          createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
+        })),
+        ...rawReviewNodes.map((r) => ({
+          id: r.id,
+          author: r.author?.login ?? "unknown",
+          state: "CHANGES_REQUESTED" as const,
+          body: r.body,
+          createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
+        })),
+        ...rawReviewSummaryNodes.map((r) => ({
+          id: r.id,
+          author: r.author?.login ?? "unknown",
+          state: r.state === "DISMISSED" ? ("DISMISSED" as const) : ("COMMENTED" as const),
+          body: r.body,
+          createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
+        })),
+      ],
+      latestReviews,
+    }),
+  ].filter((id) => approvedReviews.some((review) => review.id === id));
 
   const checks = parseCheckNodes(rawCheckNodes);
   const queueHead = raw.mergeQueueEntry?.headCommit;
@@ -232,6 +262,7 @@ export function parseRawPr(
     changesRequestedReviews,
     reviewSummaries,
     approvedReviews,
+    ...(supersededApprovalIds.length > 0 && { supersededApprovalIds }),
     checks,
     branchProtection: parseBranchProtection(raw),
     ...(allowedMergeMethods && { allowedMergeMethods }),

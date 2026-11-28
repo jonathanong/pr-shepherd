@@ -61,21 +61,24 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
     expect(result.action).toBe("triage");
     if (result.action === "triage") {
-      // Non-human CR review is auto-dismissed (in resolveCommand, SHA-gated);
-      // actionable comment minimize splits to resolveOnlyCommand.
-      expect(result.triage.resolveCommand.requiresHeadSha).toBe(true);
-      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.triage.resolveCommand.argv).toContain("review-1");
-      expect(result.triage.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
-      expect(result.triage.resolveOnlyCommand?.argv).toContain("comment-1");
+      // Actionable PR-comment minimize rides in resolveCommand; non-human CR review
+      // dismissal and hiding run in the separate SHA-gated dismissReviewsCommand.
+      expect(result.triage.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.triage.resolveCommand.argv).toContain("--minimize-comment-ids");
+      expect(result.triage.resolveCommand.argv).toContain("comment-1");
+      expect(result.triage.resolveOnlyCommand).toBeUndefined();
+      expect(result.triage.dismissReviewsCommand?.requiresHeadSha).toBe(true);
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("review-1");
       expect(result.triage.instructions.join("\n")).toContain(
         "Commit and push any changes to the PR head.",
       );
       expect(result.triage.instructions.join("\n")).toContain(
-        "`$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review",
+        "Run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids comment-1`",
       );
       expect(result.triage.instructions.join("\n")).toContain(
-        "Run: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids comment-1`",
+        "`$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed to dismiss and hide resolved reviews: `pr-shepherd apply review",
       );
       expect(result.triage.instructions.join("\n")).toContain("Rerun Shepherd now.");
     }

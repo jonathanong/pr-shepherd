@@ -21,6 +21,7 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
+  const WAIT_DELAY = { isReady: false, shouldCancel: false, remainingSeconds: 600 };
   const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
   const genericBotSummary = makeReview("PRR_GEM", "gemini-code-assist", "overview");
   const bracketBotSummary = makeReview("PRR_BRK", "github-actions[bot]", "overview");
@@ -29,18 +30,19 @@ describe("runIterate — review summary auto-minimize", () => {
     authorType: "User" as const,
   };
 
-  it("self-minimizes an already-seen bot summary in-process and does not route to triage", async () => {
+  it("routes an already-seen bot summary to triage with a separate dismissReviewsCommand instead of auto-minimizing", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
 
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.resolveCommand.hasMutations).toBe(false);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
   });
   it("does not minimize a bot summary while a child thread is unresolved", async () => {
     mockRunCheck.mockResolvedValue(
@@ -71,11 +73,7 @@ describe("runIterate — review summary auto-minimize", () => {
         },
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
 
     const result = await runIterate(makeOpts());
 
@@ -84,39 +82,34 @@ describe("runIterate — review summary auto-minimize", () => {
     if (result.action !== "triage") return;
     expect(result.triage.reviewSummaryIds).toEqual([]);
     expect(result.triage.resolveCommand.argv).not.toContain("PRR_BOT");
+    expect(result.triage.dismissReviewsCommand).toBeUndefined();
     expect(result.triage.resolveCommand.resolveThreadIds).toEqual(["thread-child"]);
   });
   it("classifies the `*[bot]` login suffix as a bot", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [bracketBotSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BRK"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BRK"]);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BRK");
   });
   it("classifies known bot logins (gemini-code-assist) as bots", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [genericBotSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_GEM"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_GEM"]);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_GEM");
   });
   it("does not minimize GitHub-classified human summaries", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [humanSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
@@ -124,15 +117,15 @@ describe("runIterate — review summary auto-minimize", () => {
   });
   it("minimizes bot summaries but not GitHub-classified human summaries", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary, humanSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
+    expect(result.triage.dismissReviewsCommand?.argv).not.toContain("PRR_HUMAN");
   });
   it("minimizes only GitHub-classified bot summaries when minimizeComments=bots", async () => {
     const cfg = defaultConfig();
@@ -146,36 +139,34 @@ describe("runIterate — review summary auto-minimize", () => {
         ],
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
 
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
   });
-  it("does not duplicate a rule-auto-resolve ID that already self-minimized as a seen summary", async () => {
-    // botSummary is both an already-seen summary (self-minimize eligible) and
-    // rule-matched (ruleAutoResolveReviewSummaryIds) — the two sets must stay
-    // disjoint: it should self-minimize once, not also ride in --minimize-comment-ids.
+  it("dedupes a rule-auto-resolve ID that is also an already-seen summary", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         reviewSummaries: [botSummary],
         ruleAutoResolveReviewSummaryIds: ["PRR_BOT"],
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUpdateReadyDelay.mockResolvedValue(WAIT_DELAY);
 
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    const minimizeIdx =
+      result.triage.dismissReviewsCommand?.argv.indexOf("--minimize-comment-ids") ?? -1;
+    expect(minimizeIdx).toBeGreaterThan(-1);
+    expect(result.triage.dismissReviewsCommand?.argv[minimizeIdx + 1]).toBe("PRR_BOT");
   });
 });

@@ -132,6 +132,8 @@ export interface ShepherdReport {
   editedSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
+  /** Internal: APPROVED reviews superseded by a newer review from the same author, eligible for hiding when `iterate.minimize-superseded-approvals` is enabled. */
+  supersededApprovedReviews?: Review[];
   /**
    * Set only when `iterate.review-output-max-chars` held review items back this tick: `shown` of
    * `total` review items appear in this report. Held items are absent from every review list,
@@ -143,6 +145,12 @@ export interface ShepherdReport {
    * summaries are not minimized this tick. Not rendered.
    */
   heldThreadReviewIds?: string[];
+  /**
+   * Internal, iterate-only: parent review IDs of every unresolved review thread on the PR (after
+   * any in-run auto-resolve). Reviews in this set are not dismissed or minimized until their
+   * inline items are resolved. Not rendered.
+   */
+  unresolvedThreadReviewIds?: string[];
   /** COMMENTED review summary IDs matched by user rules with autoResolve:true — minimized without surfacing to agent. */
   ruleAutoResolveReviewSummaryIds?: string[];
   /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */

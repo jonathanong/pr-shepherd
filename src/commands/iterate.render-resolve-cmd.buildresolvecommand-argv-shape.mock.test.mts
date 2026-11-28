@@ -124,17 +124,18 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
         result.triage.resolveCommand.argv.indexOf("--reply-thread-ids") + 1
       ];
     expect(replyThreadArg).toBe("thread-1,res-thread-1");
-    // minimize IDs split to resolveOnlyCommand — not in the reply command
+    // Review dismiss + minimize mutations run in the separate dismissReviewsCommand.
     expect(result.triage.resolveCommand.argv).not.toContain("--minimize-comment-ids");
-    expect(result.triage.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
-    expect(result.triage.resolveOnlyCommand?.argv).toContain("PRR_DUP");
-    // Bot CR review is dismissed in the reply command (same command that has --message).
-    expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
-    expect(result.triage.resolveCommand.argv).toContain("PRR_DUP");
+    expect(result.triage.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+    expect(result.triage.resolveOnlyCommand).toBeUndefined();
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("--dismiss-review-ids");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_DUP");
+    expect(result.triage.dismissReviewsCommand?.requiresDismissMessage).toBe(true);
     expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
   });
 
-  it("routes pr-level bot CR reviews to triage with --dismiss-review-ids", async () => {
+  it("routes pr-level bot CR reviews to triage with a separate dismissReviewsCommand", async () => {
     // A CHANGES_REQUESTED review has its own distinct ID — it is not also in reviewSummaries.
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -158,10 +159,12 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("triage");
     if (result.action === "triage") {
-      // Non-human (Unknown) CR reviews are auto-dismissed after the agent pushes a fix.
-      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.triage.resolveCommand.argv).toContain("PRR_CHANGES");
-      expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
+      // Non-human (Unknown) CR reviews are dismissed and minimized in the separate review command.
+      expect(result.triage.resolveCommand.hasMutations).toBe(false);
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_CHANGES");
+      expect(result.triage.dismissReviewsCommand?.requiresDismissMessage).toBe(true);
       expect(result.triage.changesRequestedReviews).toHaveLength(1);
     }
   });

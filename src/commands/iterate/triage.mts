@@ -103,6 +103,7 @@ interface HandleTriageContext {
   editedSummaries: Review[];
   surfacedApprovals: Review[];
   botUsernames: NormalizedBotUsernames;
+  blockedReviewIds?: ReadonlySet<string>;
   /** Failing checks whose external blocker has merged or closed. */
   releasedCheckNames?: ReadonlySet<string>;
   /** Released check name → the blocker that merged or closed, shown on the check. */
@@ -151,10 +152,12 @@ function previousFixAttempts(
 function pendingReviewCommands(
   resolveCommand: ResolveCommand,
   resolveOnlyCommand?: ResolveCommand,
+  dismissReviewsCommand?: ResolveCommand,
 ): EscalateDetails["pendingReviewCommands"] | undefined {
   const pending = {
     ...(resolveOnlyCommand?.hasMutations && { resolveOnlyCommand }),
     ...(resolveCommand.hasMutations && { resolveCommand }),
+    ...(dismissReviewsCommand?.hasMutations && { dismissReviewsCommand }),
   };
   return Object.keys(pending).length > 0 ? pending : undefined;
 }
@@ -183,6 +186,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     editedSummaries,
     surfacedApprovals,
     botUsernames,
+    blockedReviewIds,
     releasedCheckNames = EMPTY_RELEASED,
     releasedCheckBlockers,
     ruleAutoResolveThreadIds,
@@ -269,10 +273,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
         )
         .map(toAgentThread),
       resolutionOnlyThreadsForWork,
-      [
-        ...(report.comments.minimizeIds ?? report.comments.actionable.map((comment) => comment.id)),
-        ...reviewSummaryIds,
-      ],
+      report.comments.minimizeIds ?? report.comments.actionable.map((comment) => comment.id),
       changesRequestedReviewsForWork,
       checks,
       prReference,
@@ -281,16 +282,25 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       report.viewerAuthorization,
       allThreads,
       resolveOtherHumanThreads,
+      {
+        reviewMinimizeIds: reviewSummaryIds,
+        blockedReviewIds,
+        minimizeComments: loadConfig().iterate["minimize-comments"],
+      },
     );
 
   const escalateTriggers = countTriageAttempt
     ? checkEscalateTriggers(retryableActionableThreads, priorThreadAttempts)
     : { triggers: [], thrashHistory: undefined };
   if (escalateTriggers.triggers.length > 0) {
-    const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(
+    const { resolveCommand, resolveOnlyCommand, dismissReviewsCommand } = buildReviewCommands(
       toAgentChecks(failingChecks),
     );
-    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
+    const pending = pendingReviewCommands(
+      resolveCommand,
+      resolveOnlyCommand,
+      dismissReviewsCommand,
+    );
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
       unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
@@ -442,8 +452,13 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     !hasAutonomousWork &&
     !investigated;
   if (terminalChecks.length > 0 && !hasAutonomousWork && investigated) {
-    const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
-    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
+    const { resolveCommand, resolveOnlyCommand, dismissReviewsCommand } =
+      buildReviewCommands(failingAgentChecks);
+    const pending = pendingReviewCommands(
+      resolveCommand,
+      resolveOnlyCommand,
+      dismissReviewsCommand,
+    );
     const terminalExhausted = exhaustedAttempts.filter((check) => terminalChecks.includes(check));
     const checkSuggestion =
       terminalExhausted.length > 0
@@ -507,7 +522,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   }
   // Push access to the PR head branch is a usage precondition. Build review mutations for
   // conflict ticks normally so the caller can push and complete the same triage cycle.
-  const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
+  const { resolveCommand, resolveOnlyCommand, dismissReviewsCommand } =
+    buildReviewCommands(failingAgentChecks);
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
   const stack = report.mergeStatus.mergeRequirements?.stack;
@@ -615,6 +631,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     opts.instructions ?? configuredInstructions,
     dequeueCommand,
     buildCancelRunsInstruction(inProgressRuns),
+    dismissReviewsCommand,
   );
   if (investigate) {
     // The failing-checks pointer is replaced: these checks have no excerpt for the CI playbook.
@@ -728,6 +745,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       changesRequestedReviews,
       resolveCommand,
       ...(resolveOnlyCommand !== undefined ? { resolveOnlyCommand } : undefined),
+      ...(dismissReviewsCommand !== undefined ? { dismissReviewsCommand } : undefined),
       instructions,
       firstLookThreads,
       firstLookComments,

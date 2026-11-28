@@ -49,7 +49,11 @@ function replyTo(thread, seen) {
 /** Mutates a fixture clone: generated mutations and reruns take effect on GitHub. */
 export function applyAgentEffects(fixture, triage, seen: Map<string, Record<string, unknown>>) {
   const batch = fixture.batchData;
-  const argvs = [triage.resolveCommand, triage.resolveOnlyCommand].map((c) => c?.argv);
+  const argvs = [
+    triage.resolveCommand,
+    triage.resolveOnlyCommand,
+    triage.dismissReviewsCommand,
+  ].map((c) => c?.argv);
   const ids = (flag: string) => new Set(argvs.flatMap((argv) => flagIds(argv, flag)));
   const resolve = ids("--resolve-thread-ids");
   const reply = ids("--reply-thread-ids");

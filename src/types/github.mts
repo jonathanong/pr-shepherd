@@ -196,7 +196,9 @@ export interface Review {
   author: string;
   authorType: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
-  /** Present for minimizable COMMENTED/APPROVED reviews; false for non-minimizable review rows. */
+  /** Present when GitHub reports the review is already minimized. */
+  isMinimized?: boolean;
+  /** Present for minimizable reviews; false for non-minimizable review rows. */
   viewerCanMinimize?: boolean;
   body: string;
   createdAtUnix?: number;
@@ -291,6 +293,8 @@ export interface BatchPrData extends BatchPrMergeFields {
   changesRequestedReviews: Review[];
   reviewSummaries: Review[];
   approvedReviews: Review[];
+  /** Internal: APPROVED review IDs superseded by a newer review from the same author (including already-minimized reviews). */
+  supersededApprovalIds?: string[];
   checks: CheckRun[];
   mergeQueueChecks?: CheckRun[];
   mergeQueueChecksIncomplete?: true;

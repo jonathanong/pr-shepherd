@@ -251,6 +251,8 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         }
         nodes {
           id
+          isMinimized
+          viewerCanMinimize
           authorAssociation
           author {
             __typename
@@ -263,13 +265,14 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
         }
       }
-      reviewSummaries: reviews(states: COMMENTED, last: 50) {
+      reviewSummaries: reviews(states: [COMMENTED, DISMISSED], last: 50) {
         pageInfo {
           hasPreviousPage
           startCursor
         }
         nodes {
           id
+          state
           isMinimized
           viewerCanMinimize
           authorAssociation

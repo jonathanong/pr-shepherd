@@ -124,7 +124,7 @@ The single-PR `iterate` projection omits trivial-default fields (including `stat
 ### Review workflow
 
 1. Call `iterate` first.
-2. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation.
+2. Translate its `resolveCommand` / `resolveOnlyCommand` / `dismissReviewsCommand` arguments into `apply` `review_mutations` operations.
 3. Use one `suggest` call for all marked suggestion threads, in displayed order.
 
 Use `append_journal` only when the caller asks for it; direct apply honors that intent even when `viewerCanUpdate` is false. Journal reads do not depend on `iterate`.

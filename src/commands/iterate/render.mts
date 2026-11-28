@@ -15,6 +15,7 @@ import {
   buildBehindBaseHintInstruction,
   buildRepeatedWorkflowBranchRecoveryInstructions,
   buildResolveCommandInstruction,
+  buildDismissReviewsCommandInstruction,
   buildFixCompletionInstruction,
   QUEUED_CONFLICT_CONTINUATION,
 } from "./check-instructions.mts";
@@ -30,11 +31,7 @@ import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery
 import { buildPushSteps } from "./triage-loop-instruction.mts";
 import type { InstructionStyle } from "../../config/load.mts";
 
-/**
- * Render a resolve command as a shell snippet. Appends `--require-sha HEAD` when set: run after
- * the push step, the local HEAD is the pushed PR head, and `apply review` rejects the mutations
- * if it is not. `apply review` reads that HEAD itself with a read-only `git rev-parse HEAD`.
- */
+/** Render a resolve command, appending `--require-sha HEAD` when `requiresHeadSha` is set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
   const command = renderShellCommand(rc.argv);
   return rc.requiresHeadSha ? `${command} ${REQUIRE_HEAD_SHA}` : command;
@@ -57,15 +54,16 @@ export function buildFixInstructions(
   editedSummaries: Review[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   resolveOnlyCommand?: ResolveCommand,
-  behindBaseHint = "", // iterate.behind-base-hint — see buildBehindBaseHintInstruction
+  behindBaseHint = "",
   isBehind = false,
   _viewerCanUpdate = false,
   hasExhaustedWorkflowRerun = false,
-  stackRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
-  queueEjection?: QueueEjectionRecovery, // current merge-queue removal with failing queue checks
-  instructionStyle: InstructionStyle = "inline", // see iterate.instructions
-  dequeueCommand?: string, // a conflicting PR that is still a merge-queue entry
-  cancelRunsStep?: string, // cancel superseded in-progress runs before editing
+  stackRebase?: string,
+  queueEjection?: QueueEjectionRecovery,
+  instructionStyle: InstructionStyle = "inline",
+  dequeueCommand?: string,
+  cancelRunsStep?: string,
+  dismissReviewsCommand?: ResolveCommand,
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -73,7 +71,6 @@ export function buildFixInstructions(
     resolveCommand,
     resolveOnlyCommand,
   );
-
   const failingChecks = checks.filter((c) => isFailingAgentCheck(c));
   const repeatedWorkflowBranchRecoveryInstructions =
     buildRepeatedWorkflowBranchRecoveryInstructions(
@@ -90,19 +87,14 @@ export function buildFixInstructions(
     hasAnnotations ||
     changesRequestedReviews.length > 0 ||
     actionableComments.length > 0;
-
-  // Start with interpretation. The agent decides what raw feedback warrants a code change.
-  // A queued conflict offers a wait path that publishes nothing, so fixes, branch updates,
-  // pushes, and review mutations (which must follow a push) become path (a).
+  // A queued conflict offers a wait path that publishes nothing, so mutating steps become path (a).
   const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
   if (cancelRunsStep) instructions.push(cancelRunsStep);
   if (hasNonConflictHints) instructions.push(pathA("Fix each warranted item."));
-  // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
     isBehind,
     hasConflicts: hasConflicts && !stackRebase,
   }).map(pathA);
-  // The conflict hint belongs with the conflict step; otherwise it precedes the push step.
   const hintWithConflictStep = hasConflicts && !hasRepeatedWorkflowBranchRecovery;
   const branchRecovery = hasConflicts || hasRepeatedWorkflowBranchRecovery;
   if (hintWithConflictStep)
@@ -174,7 +166,9 @@ export function buildFixInstructions(
   }
 
   const hasReviewMutations =
-    resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
+    resolveCommand.hasMutations ||
+    resolveOnlyCommand?.hasMutations === true ||
+    dismissReviewsCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
   const genericPush = !(branchRecovery || queueEjection) && hasNonConflictHints;
 
@@ -187,11 +181,16 @@ export function buildFixInstructions(
 
   if (resolveOnlyCommand?.hasMutations)
     instructions.push(pathA(`Run: \`${renderResolveCommand(resolveOnlyCommand)}\``));
-
   instructions.push(
     ...buildResolveCommandInstruction(resolveCommand, renderResolveCommand(resolveCommand)).map(
       pathA,
     ),
+    ...(dismissReviewsCommand?.hasMutations
+      ? buildDismissReviewsCommandInstruction(
+          dismissReviewsCommand,
+          renderResolveCommand(dismissReviewsCommand),
+        ).map(pathA)
+      : []),
     dequeueCommand ? QUEUED_CONFLICT_CONTINUATION : buildFixCompletionInstruction(),
   );
   return instructions;

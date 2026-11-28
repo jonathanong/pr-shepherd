@@ -122,12 +122,14 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("triage");
     if (result.action === "triage") {
-      const { resolveCommand } = result.triage;
-      // Non-human (Unknown) CR reviews are auto-dismissed in the same command as replies.
-      expect(resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(resolveCommand.argv.join(" ")).toContain("r-1");
-      expect(resolveCommand.argv).toContain("$CHANGE_MESSAGE");
-      expect(resolveCommand.requiresDismissMessage).toBe(true);
+      const { resolveCommand, dismissReviewsCommand } = result.triage;
+      // Non-human (Unknown) CR reviews are dismissed and minimized in the separate review command.
+      expect(resolveCommand.argv).not.toContain("--dismiss-review-ids");
+      expect(dismissReviewsCommand?.argv).toContain("--dismiss-review-ids");
+      expect(dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+      expect(dismissReviewsCommand?.argv.join(" ")).toContain("r-1");
+      expect(dismissReviewsCommand?.argv).toContain("$CHANGE_MESSAGE");
+      expect(dismissReviewsCommand?.requiresDismissMessage).toBe(true);
     }
   });
 });

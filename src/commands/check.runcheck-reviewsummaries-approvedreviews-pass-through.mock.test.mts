@@ -150,6 +150,7 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
         id: "PRR_CR",
         author: "alice",
         authorType: "User" as const,
+        viewerCanMinimize: true,
         body: "new request",
         edited: true,
       },

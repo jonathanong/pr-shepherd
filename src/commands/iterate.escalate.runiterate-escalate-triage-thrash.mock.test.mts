@@ -123,6 +123,7 @@ describe("runIterate — escalate (triage-thrash)", () => {
       const pendingArgv = [
         ...(result.escalate.pendingReviewCommands?.resolveOnlyCommand?.argv ?? []),
         ...(result.escalate.pendingReviewCommands?.resolveCommand?.argv ?? []),
+        ...(result.escalate.pendingReviewCommands?.dismissReviewsCommand?.argv ?? []),
       ];
       expect(pendingArgv).toContain(summary.id);
       expect(result.escalate.humanMessage).toContain(summary.body);

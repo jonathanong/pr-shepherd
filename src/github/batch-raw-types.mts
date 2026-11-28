@@ -175,6 +175,8 @@ export interface RawComment {
 
 export interface RawReview {
   id: string;
+  isMinimized?: boolean;
+  viewerCanMinimize?: boolean;
   authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
   body: string;
@@ -184,6 +186,7 @@ export interface RawReview {
 
 export interface RawReviewSummary {
   id: string;
+  state?: string;
   isMinimized: boolean;
   viewerCanMinimize: boolean;
   authorAssociation?: CommentAuthorAssociation;

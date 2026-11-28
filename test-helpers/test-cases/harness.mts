@@ -657,7 +657,7 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
       ...comment,
     }));
   }
-  for (const key of ["reviewSummaries", "approvedReviews"]) {
+  for (const key of ["changesRequestedReviews", "reviewSummaries", "approvedReviews"]) {
     if (Array.isArray(batchData[key])) {
       batchData[key] = batchData[key].map((review) => ({
         viewerCanMinimize: true,

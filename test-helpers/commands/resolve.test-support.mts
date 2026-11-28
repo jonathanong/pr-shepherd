@@ -110,6 +110,10 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
       ...thread,
     })),
     comments: data.comments.map((comment) => ({ viewerCanMinimize: true, ...comment })),
+    changesRequestedReviews: data.changesRequestedReviews.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
     reviewSummaries: data.reviewSummaries.map((review) => ({
       viewerCanMinimize: true,
       ...review,

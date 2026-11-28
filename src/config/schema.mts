@@ -133,6 +133,7 @@ export const configSchema = z.strictObject({
       "stall-timeout-minutes": nonNegative().default(60),
       "ready-delay-minutes": nonNegative().default(0),
       "minimize-approvals": z.boolean().default(false),
+      "minimize-superseded-approvals": z.boolean().default(true),
       "minimize-comments": z.enum(["all", "bots", "none"]).default("bots"),
       "behind-base-hint": z.string().default(""),
       "review-output-max-chars": z.number().int().nonnegative().default(50000),

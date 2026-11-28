@@ -199,6 +199,9 @@ export function projectIterateLean(
           ...(result.triage.resolveOnlyCommand && {
             resolveOnlyCommand: result.triage.resolveOnlyCommand,
           }),
+          ...(result.triage.dismissReviewsCommand && {
+            dismissReviewsCommand: result.triage.dismissReviewsCommand,
+          }),
           ...(result.triage.reviewItems && { reviewItems: result.triage.reviewItems }),
           ...(result.triage.deferredWork && {
             deferredWork: nonZeroCounts(result.triage.deferredWork),

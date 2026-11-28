@@ -193,6 +193,12 @@ export function formatTriageResult(
   }
 
   if (result.triage.changesRequestedReviews.length > 0) {
+    const dismissIds = new Set(result.triage.dismissReviewsCommand?.dismissReviewIds ?? []);
+    const blockedByThread = new Set(
+      [...result.triage.threads, ...result.triage.resolutionOnlyThreads].flatMap((t) =>
+        t.reviewId !== undefined ? [t.reviewId] : [],
+      ),
+    );
     sections.push("## Changes-requested reviews");
     for (const r of result.triage.changesRequestedReviews) {
       // A stale bot CR that already had its full body surfaced on a prior tick stays a terse
@@ -202,7 +208,10 @@ export function formatTriageResult(
       // review-summary/approval sections below, so the agent actually has a body to read —
       // the bare bullet this replaced only ever rendered the reviewId, never the body.
       if (r.staleBotCr) {
-        sections.push(renderReviewBullet(r));
+        const pendingInlineThreads =
+          !dismissIds.has(r.id) &&
+          (blockedByThread.has(r.id) || result.triage.reviewItems !== undefined);
+        sections.push(renderReviewBullet(r, { pendingInlineThreads }));
         continue;
       }
       const staleTag = r.staleReview

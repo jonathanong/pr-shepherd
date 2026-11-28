@@ -93,6 +93,23 @@ export function buildResolveCommandInstruction(
   return [`Run, even if no code changed: \`${rendered}\``];
 }
 
+/** Build the separate review-dismissal / review-hiding step once all inline items are resolved. */
+export function buildDismissReviewsCommandInstruction(
+  dismissReviewsCommand: ResolveCommand | undefined,
+  rendered: string,
+): string[] {
+  if (!dismissReviewsCommand?.hasMutations) return [];
+  if (dismissReviewsCommand.requiresDismissMessage) {
+    const verb = dismissReviewsCommand.argv.includes("--minimize-comment-ids")
+      ? "dismiss and hide"
+      : "dismiss";
+    return [
+      `\`$CHANGE_MESSAGE\`: one sentence on what changed. Run even if no code changed to ${verb} resolved reviews: \`${rendered}\``,
+    ];
+  }
+  return [`Run to hide resolved reviews: \`${rendered}\``];
+}
+
 /** One pointer. Conclusion, rerun, and bare-check rules live in the CI playbook. */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];

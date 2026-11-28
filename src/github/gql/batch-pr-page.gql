@@ -99,6 +99,8 @@ query BatchPrPage(
         }
         nodes {
           id
+          isMinimized
+          viewerCanMinimize
           authorAssociation
           author {
             __typename
@@ -111,14 +113,18 @@ query BatchPrPage(
           }
         }
       }
-      reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor)
-        @include(if: $includeReviewSummaries) {
+      reviewSummaries: reviews(
+        states: [COMMENTED, DISMISSED]
+        last: 50
+        before: $reviewSummariesCursor
+      ) @include(if: $includeReviewSummaries) {
         pageInfo {
           hasPreviousPage
           startCursor
         }
         nodes {
           id
+          state
           isMinimized
           viewerCanMinimize
           authorAssociation

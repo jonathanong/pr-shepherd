@@ -53,6 +53,11 @@ import {
   classifyReviewsForDisplay,
   classifyChangesRequestedReviewsForDisplay,
 } from "../comments/review-visibility.mts";
+import {
+  findSupersededApprovalIds,
+  reviewOrderingEntriesFromReviews,
+} from "../comments/superseded-approvals.mts";
+import { shouldMinimizeAuthor } from "../comments/minimize-policy.mts";
 import { applySuppressedRuleAutoResolve } from "./rule-auto-resolve.mts";
 import { applyReviewOutputBudget } from "./check-review-budget.mts";
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
@@ -137,7 +142,8 @@ async function runScopedCheck(
 ): Promise<ShepherdReport> {
   const config = loadConfig();
   const reuseFingerprint = opts.fingerprintCache === true;
-  const paginateApprovedReviews = config.iterate["minimize-approvals"];
+  const paginateApprovedReviews =
+    config.iterate["minimize-approvals"] || config.iterate["minimize-superseded-approvals"];
   const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
   // GraphQL transport: conditional REST change detectors can replay an idle report for free.
   // Changed trunk rules invalidate a cached report; check again without reuse.
@@ -441,6 +447,24 @@ async function runScopedCheck(
     ),
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
+  const supersededApprovalIdSet = findSupersededApprovalIds({
+    reviews: reviewOrderingEntriesFromReviews(batchData),
+    latestReviews: batchData.latestReviews,
+    ...(batchData.supersededApprovalIds && {
+      precomputedSupersededIds: new Set(batchData.supersededApprovalIds),
+    }),
+  });
+  const supersededApprovedReviews = batchData.approvedReviews.filter(
+    (review) =>
+      (config.iterate["minimize-approvals"] || supersededApprovalIdSet.has(review.id)) &&
+      shouldMinimizeAuthor(
+        review.authorType,
+        config.iterate["minimize-comments"],
+        review.author,
+        botUsernames,
+      ) &&
+      canGenerateItemMutation(review.id, review.body, review.viewerCanMinimize, "minimize"),
+  );
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const visibleChangesRequestedIds = new Set(changesRequestedReviews.map((review) => review.id));
   const changesRequestedReviewCount = batchData.changesRequestedReviews.filter((review) => {
@@ -668,6 +692,19 @@ async function runScopedCheck(
     ...authorizedRuleAutoResolveThreadIds,
     ...[...deniedRuleAutoResolveThreadIds].filter((id) => visibleMutationThreadIds.has(id)),
   ];
+  const autoResolvedIdSet = new Set(autoResolved.map((item) => item.id));
+  const unresolvedThreadReviewIds = [
+    ...new Set(
+      batchData.reviewThreads
+        .filter(
+          (thread) =>
+            thread.isResolved === false &&
+            thread.reviewId !== undefined &&
+            !autoResolvedIdSet.has(thread.id),
+        )
+        .map((thread) => thread.reviewId!),
+    ),
+  ];
   mergeStatus = withTrunkRequiredContexts(mergeStatus, unreported.requiredContexts);
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
   const queueCommit = batchData.isInMergeQueue
@@ -736,8 +773,10 @@ async function runScopedCheck(
     firstLookSummaries: budgeted.firstLookSummaries,
     editedSummaries: budgeted.editedSummaries,
     approvedReviews: approvedReviewVisibility.visible,
+    ...(supersededApprovedReviews.length > 0 && { supersededApprovedReviews }),
     ...(reviewItems && { reviewItems }),
     ...(heldThreadReviewIds && { heldThreadReviewIds }),
+    ...(unresolvedThreadReviewIds.length > 0 && { unresolvedThreadReviewIds }),
     ...(ruleAutoResolveReviewSummaryIds.length > 0
       ? { ruleAutoResolveReviewSummaryIds }
       : undefined),
