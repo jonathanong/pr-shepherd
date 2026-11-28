@@ -14,6 +14,8 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
     markSeen: vi.fn().mockResolvedValue(undefined),
     markReplySeen: vi.fn().mockResolvedValue(undefined),
     markReviewInlineThreads: vi.fn().mockResolvedValue(undefined),
+    markReviewUnresolvedThreads: vi.fn().mockResolvedValue(undefined),
+    pruneResolvedReviewThreads: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -31,6 +33,7 @@ vi.mock("../../src/github/review-unresolved-threads.mts", async (importOriginal)
     await importOriginal<typeof import("../../src/github/review-unresolved-threads.mts")>();
   return {
     ...actual,
+    checkThreadsStillUnresolved: vi.fn().mockResolvedValue(new Set()),
     findUnresolvedThreadsByReviewId: vi.fn().mockResolvedValue(new Map()),
   };
 });
@@ -53,7 +56,10 @@ import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchReplyThreadTranscripts } from "../../src/github/reply-thread-transcripts.mts";
-import { findUnresolvedThreadsByReviewId } from "../../src/github/review-unresolved-threads.mts";
+import {
+  checkThreadsStillUnresolved,
+  findUnresolvedThreadsByReviewId,
+} from "../../src/github/review-unresolved-threads.mts";
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
 import { applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
@@ -62,6 +68,8 @@ import {
   markSeen,
   markReplySeen,
   markReviewInlineThreads,
+  markReviewUnresolvedThreads,
+  pruneResolvedReviewThreads,
   hashBody,
 } from "../../src/state/seen-comments.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
@@ -69,6 +77,7 @@ import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockFetchReplyThreadTranscripts = vi.mocked(fetchReplyThreadTranscripts);
+const mockCheckThreadsStillUnresolved = vi.mocked(checkThreadsStillUnresolved);
 const mockFindUnresolvedThreadsByReviewId = vi.mocked(findUnresolvedThreadsByReviewId);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
@@ -76,6 +85,8 @@ const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockMarkReplySeen = vi.mocked(markReplySeen);
 const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
+const mockMarkReviewUnresolvedThreads = vi.mocked(markReviewUnresolvedThreads);
+const mockPruneResolvedReviewThreads = vi.mocked(pruneResolvedReviewThreads);
 
 const BASE_OPTS = { format: "text" as const };
 
@@ -177,7 +188,9 @@ export function registerHooks(): void {
       fingerprint: testFingerprint(),
     });
     mockFetchReplyThreadTranscripts.mockResolvedValue(new Map());
+    mockCheckThreadsStillUnresolved.mockResolvedValue(new Set());
     mockFindUnresolvedThreadsByReviewId.mockResolvedValue(new Map());
+    mockLoadSeenMap.mockResolvedValue(new Map());
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],
       resolvedThreads: [],
@@ -203,6 +216,7 @@ export {
   markReplySeen,
   markReviewInlineThreads,
   mockApplyResolveOptions,
+  mockCheckThreadsStillUnresolved,
   mockFetchPrBatch,
   mockFetchReplyThreadTranscripts,
   mockFindUnresolvedThreadsByReviewId,
@@ -212,6 +226,8 @@ export {
   mockMarkSeen,
   mockMarkReplySeen,
   mockMarkReviewInlineThreads,
+  mockMarkReviewUnresolvedThreads,
+  mockPruneResolvedReviewThreads,
   runResolveMutate,
 };
 export type { BatchPrData, PrComment, ReviewThread };

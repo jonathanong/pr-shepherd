@@ -108,4 +108,15 @@ describe("findSupersededApprovalIds", () => {
     });
     expect([...superseded]).toEqual(["PRR_AP_1"]);
   });
+
+  it("keeps a non-precomputed approval as latest when tied at the same timestamp with a precomputed superseded approval", () => {
+    const superseded = findSupersededApprovalIds({
+      reviews: [
+        { id: "PRR_AP_VISIBLE", author: "coderabbitai", state: "APPROVED", createdAtUnix: 100 },
+        { id: "PRR_AP_PRECOMP", author: "coderabbitai", state: "APPROVED", createdAtUnix: 100 },
+      ],
+      precomputedSupersededIds: new Set(["PRR_AP_PRECOMP"]),
+    });
+    expect([...superseded]).toEqual(["PRR_AP_PRECOMP"]);
+  });
 });

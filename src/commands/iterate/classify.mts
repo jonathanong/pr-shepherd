@@ -71,14 +71,14 @@ export function classifyReviewSummaries(
     [...summaries.firstLook, ...summaries.seen].filter(eligible).map((r) => r.id),
   );
   // Rule-matched summaries are already suppressed from agent output; bypass normal
-  // policy gates.
+  // policy gates, while still waiting for any unresolved inline threads.
   for (const id of ruleAutoResolveIds) {
-    if (!minimizeIds.includes(id)) minimizeIds.push(id);
+    if (!blockedReviewIds.has(id) && !minimizeIds.includes(id)) minimizeIds.push(id);
   }
   const minimizeSupersededApprovals = options.minimizeSupersededApprovals ?? true;
   const candidateApprovalsById = new Map<string, Review>();
-  for (const r of approvals) candidateApprovalsById.set(r.id, r);
-  for (const r of options.supersededApprovals ?? []) {
+  for (const r of options.supersededApprovals ?? []) candidateApprovalsById.set(r.id, r);
+  for (const r of approvals) {
     if (!candidateApprovalsById.has(r.id)) candidateApprovalsById.set(r.id, r);
   }
   const candidateApprovals = [...candidateApprovalsById.values()];

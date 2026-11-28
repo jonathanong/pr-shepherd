@@ -10,7 +10,11 @@ vi.mock("./rest-feedback-read.mts", () => ({
 import { graphqlWithRateLimit } from "./client.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
 import { runWithGithubTransport } from "./transport.mts";
-import { findUnresolvedThreadsByReviewId, isReviewNodeId } from "./review-unresolved-threads.mts";
+import {
+  checkThreadsStillUnresolved,
+  findUnresolvedThreadsByReviewId,
+  isReviewNodeId,
+} from "./review-unresolved-threads.mts";
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
 const mockReadRestFeedback = vi.mocked(readRestFeedback);
@@ -27,6 +31,20 @@ describe("isReviewNodeId", () => {
     expect(isReviewNodeId("IC_kwDOSaSRXM8AAAAB123")).toBe(false);
     expect(isReviewNodeId("PRRT_kwDOSaSRXM69AKWE")).toBe(false);
     expect(isReviewNodeId("comment-1")).toBe(false);
+  });
+});
+
+describe("checkThreadsStillUnresolved", () => {
+  it("queries only the given thread node IDs and returns the still-unresolved subset", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: {
+        nodes: [{ id: "PRRT_1", isResolved: false }, { id: "PRRT_2", isResolved: true }, null],
+      },
+    });
+
+    const still = await checkThreadsStillUnresolved(42, REPO, ["PRRT_1", "PRRT_2", "PRRT_GONE"]);
+    expect([...still]).toEqual(["PRRT_1"]);
+    expect(mockGraphql).toHaveBeenCalledTimes(1);
   });
 });
 

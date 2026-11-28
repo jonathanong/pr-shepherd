@@ -380,7 +380,11 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     annotationOnly: true as const,
   }));
   const checks = [...failingAgentChecks, ...annotatedAgentChecks];
-  const { changesRequestedReviews } = report;
+  const changesRequestedReviews = report.changesRequestedReviews.map((review) =>
+    review.staleBotCr && blockedReviewIds?.has(review.id)
+      ? { ...review, pendingInlineThreads: true }
+      : review,
+  );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const queuedConflict = isQueuedConflict(report.mergeQueue?.inQueue, report.mergeStatus.status);
   const isBehind = report.mergeStatus.status === "BEHIND";

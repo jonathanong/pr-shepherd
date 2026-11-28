@@ -209,8 +209,9 @@ export function formatTriageResult(
       // the bare bullet this replaced only ever rendered the reviewId, never the body.
       if (r.staleBotCr) {
         const pendingInlineThreads =
-          !dismissIds.has(r.id) &&
-          (blockedByThread.has(r.id) || result.triage.reviewItems !== undefined);
+          r.pendingInlineThreads === true ||
+          (!dismissIds.has(r.id) &&
+            (blockedByThread.has(r.id) || result.triage.reviewItems !== undefined));
         sections.push(renderReviewBullet(r, { pendingInlineThreads }));
         continue;
       }

@@ -36,6 +36,8 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
     loadSeenMap: vi.fn().mockResolvedValue(new Map()),
     markSeen: vi.fn().mockResolvedValue(undefined),
     markReviewInlineThreads: vi.fn().mockResolvedValue(undefined),
+    markReviewUnresolvedThreads: vi.fn().mockResolvedValue(undefined),
+    pruneResolvedReviewThreads: vi.fn().mockResolvedValue(undefined),
   };
 });
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));

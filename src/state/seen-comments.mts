@@ -53,7 +53,11 @@ export function classifyItem(
     return "unchanged";
   }
   if (typeof m.bodyHash === "string" && m.bodyHash !== currentHash) return "edited";
-  if (m.bodyHash === undefined && Array.isArray(m.inlineThreadIds)) return "new";
+  if (
+    m.bodyHash === undefined &&
+    (Array.isArray(m.inlineThreadIds) || Array.isArray(m.unresolvedInlineThreadIds))
+  )
+    return "new";
   return "unchanged";
 }
 
@@ -143,10 +147,49 @@ export async function markReviewInlineThreads(
   key: StateKey,
   reviewId: string,
   inlineThreadIds: readonly string[],
+  unresolvedInlineThreadIds?: readonly string[],
 ): Promise<void> {
   await writeSeenMarker(key, reviewId, {
     inlineThreadIds: [...new Set(inlineThreadIds)].sort((a, b) => a.localeCompare(b)),
+    ...(unresolvedInlineThreadIds !== undefined && {
+      unresolvedInlineThreadIds: [...new Set(unresolvedInlineThreadIds)].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    }),
   });
+}
+
+export async function markReviewUnresolvedThreads(
+  key: StateKey,
+  reviewId: string,
+  unresolvedInlineThreadIds: readonly string[],
+): Promise<void> {
+  await writeSeenMarker(key, reviewId, {
+    unresolvedInlineThreadIds: [...new Set(unresolvedInlineThreadIds)].sort((a, b) =>
+      a.localeCompare(b),
+    ),
+  });
+}
+
+export async function pruneResolvedReviewThreads(
+  key: StateKey,
+  resolvedThreadIds: readonly string[],
+): Promise<void> {
+  if (resolvedThreadIds.length === 0) return;
+  const resolved = new Set(resolvedThreadIds);
+  const seen = await loadSeenMap(key);
+  const updates: Promise<void>[] = [];
+  for (const [reviewId, marker] of seen) {
+    if (!Array.isArray(marker.unresolvedInlineThreadIds)) continue;
+    const current = marker.unresolvedInlineThreadIds.filter(
+      (id): id is string => typeof id === "string",
+    );
+    const remaining = current.filter((id) => !resolved.has(id));
+    if (remaining.length !== current.length) {
+      updates.push(markReviewUnresolvedThreads(key, reviewId, remaining));
+    }
+  }
+  await Promise.allSettled(updates);
 }
 
 /**

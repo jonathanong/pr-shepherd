@@ -57,4 +57,27 @@ describe("formatTriageResult — fallback branches", () => {
     expect(output).not.toContain("should not render");
     expect(output).toContain("(no review body)");
   });
+
+  it("renders pending inline threads tag for stale bot CRs flagged with pendingInlineThreads", () => {
+    const iterResult: IterateResult = { ...makeIterateResult("triage") };
+    if (iterResult.action !== "triage") throw new Error("unreachable");
+    iterResult.triage = {
+      ...iterResult.triage,
+      changesRequestedReviews: [
+        {
+          id: "PRR_SUPPRESSED_THREAD",
+          author: "coderabbitai",
+          authorType: "Bot",
+          body: "review body",
+          staleBotCr: true,
+          pendingInlineThreads: true,
+        },
+      ],
+    };
+
+    const output = formatTriageResult("# PR #42 [TRIAGE]", iterResult);
+
+    expect(output).toContain("PRR_SUPPRESSED_THREAD");
+    expect(output).toContain("pending inline threads");
+  });
 });

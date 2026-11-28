@@ -40,7 +40,13 @@ import {
   refreshReadyMergeability,
   refreshUnknownMergeability,
 } from "./ready-mergeability.mts";
-import { loadSeenMap, markSeen, classifyItem, mutationWasDenied } from "../state/seen-comments.mts";
+import {
+  loadSeenMap,
+  markSeen,
+  classifyItem,
+  mutationWasDenied,
+  pruneResolvedReviewThreads,
+} from "../state/seen-comments.mts";
 import { aliasThreadSeenMarkers } from "../github/rest-identities.mts";
 import {
   conversationResolutionProven,
@@ -629,7 +635,11 @@ async function runScopedCheck(
         .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))
         .map((r) => markSeen(stateKey, r.id, r.body)),
     ]);
-    await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
+    await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads, [
+      ...batchData.changesRequestedReviews.map((review) => review.id),
+      ...batchData.reviewSummaries.map((review) => review.id),
+      ...batchData.approvedReviews.map((review) => review.id),
+    ]);
   }
   const authorizedPartition: BatchPartition = {
     ...partition,
@@ -683,6 +693,12 @@ async function runScopedCheck(
     partition: authorizedPartition,
     batch: batchData,
   });
+  if (opts.persistSeen !== false && autoResolved.length > 0) {
+    await pruneResolvedReviewThreads(
+      stateKey,
+      autoResolved.map((item) => item.id),
+    );
+  }
   const visibleMutationThreadIds = new Set(
     [...budgeted.threads.activeThreads, ...budgeted.threads.resolutionOnlyThreads].map(
       (thread) => thread.id,

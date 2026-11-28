@@ -205,6 +205,8 @@ export interface Review {
   edited?: boolean;
   /** True for bot CR re-surfaced after first look (body unchanged). Terse render. */
   staleBotCr?: boolean;
+  /** True when a re-surfaced bot CR is still held back from dismissal by unresolved inline threads. */
+  pendingInlineThreads?: boolean;
   /** Commit OID the review was made against, when available from GraphQL. */
   commitOid?: string;
   /** PR head OID, set on changes-requested reviews only when `commitOid` differs from it. Raw data, not a staleness verdict. */

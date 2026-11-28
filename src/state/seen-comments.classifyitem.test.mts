@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes } from "node:crypto";
 import { rm } from "node:fs/promises";
-import { classifyItem, hashBody } from "./seen-comments.mts";
+import {
+  classifyItem,
+  hashBody,
+  loadSeenMap,
+  markReviewInlineThreads,
+  pruneResolvedReviewThreads,
+} from "./seen-comments.mts";
 
 let testStateDir: string;
 
@@ -53,5 +59,28 @@ describe("classifyItem", () => {
   it("returns 'new' for review markers that only store inline thread ids", () => {
     const map = new Map([["PRR_1", { seenAt: 1000, inlineThreadIds: ["PRRT_1"] }]]);
     expect(classifyItem("PRR_1", "review summary", map)).toBe("new");
+  });
+
+  it("returns 'new' for review markers that only store unresolvedInlineThreadIds", () => {
+    const map = new Map([["PRR_1", { seenAt: 1000, unresolvedInlineThreadIds: [] }]]);
+    expect(classifyItem("PRR_1", "review summary", map)).toBe("new");
+  });
+});
+
+describe("pruneResolvedReviewThreads", () => {
+  it("prunes resolved thread ids from review markers while preserving other fields", async () => {
+    const key = { owner: "o", repo: "r", pr: 7 };
+    await markReviewInlineThreads(key, "PRR_1", ["PRRT_1", "PRRT_2"], ["PRRT_1", "PRRT_2"]);
+    await markReviewInlineThreads(key, "PRR_2", ["PRRT_3"], ["PRRT_3"]);
+
+    await pruneResolvedReviewThreads(key, ["PRRT_1"]);
+    const afterFirst = await loadSeenMap(key);
+    expect(afterFirst.get("PRR_1")?.unresolvedInlineThreadIds).toEqual(["PRRT_2"]);
+    expect(afterFirst.get("PRR_1")?.inlineThreadIds).toEqual(["PRRT_1", "PRRT_2"]);
+    expect(afterFirst.get("PRR_2")?.unresolvedInlineThreadIds).toEqual(["PRRT_3"]);
+
+    await pruneResolvedReviewThreads(key, ["PRRT_2"]);
+    const afterSecond = await loadSeenMap(key);
+    expect(afterSecond.get("PRR_1")?.unresolvedInlineThreadIds).toEqual([]);
   });
 });

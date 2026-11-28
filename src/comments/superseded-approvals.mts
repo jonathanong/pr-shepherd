@@ -56,13 +56,23 @@ export function findSupersededApprovalIds(input: {
   }
 
   for (const [author, approvals] of approvalsByAuthor) {
+    const precomputed = input.precomputedSupersededIds;
+    const isBetterLatest = (
+      candidate: { id: string; createdAtUnix: number; order: number },
+      current: { id: string; createdAtUnix: number; order: number },
+    ): boolean => {
+      if (candidate.createdAtUnix !== current.createdAtUnix) {
+        return candidate.createdAtUnix > current.createdAtUnix;
+      }
+      const candPre = precomputed?.has(candidate.id) === true;
+      const curPre = precomputed?.has(current.id) === true;
+      if (candPre !== curPre) return !candPre;
+      return candidate.order > current.order;
+    };
     let latest = approvals[0]!;
     for (let i = 1; i < approvals.length; i++) {
       const candidate = approvals[i]!;
-      if (
-        candidate.createdAtUnix > latest.createdAtUnix ||
-        (candidate.createdAtUnix === latest.createdAtUnix && candidate.order > latest.order)
-      ) {
+      if (isBetterLatest(candidate, latest)) {
         latest = candidate;
       }
     }

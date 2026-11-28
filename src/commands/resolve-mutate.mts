@@ -6,10 +6,12 @@ import {
   type ApplyReviewPreflight,
 } from "../github/apply-review-preflight.mts";
 import {
-  findUnresolvedThreadsByReviewId,
-  isReviewNodeId,
-} from "../github/review-unresolved-threads.mts";
-import { markReplySeen } from "../state/seen-comments.mts";
+  BLOCKED_REVIEW_INSTRUCTION,
+  collectReviewIdsToGuard,
+  formatBlockedReviewErrors,
+  resolveBlockedReviews,
+} from "./resolve-review-guard.mts";
+import { markReplySeen, pruneResolvedReviewThreads } from "../state/seen-comments.mts";
 import { threadTranscriptBodies } from "../threads/transcript.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
 import { adoptedReplyThreads } from "../comments/uncertain-replies.mts";
@@ -51,23 +53,18 @@ export async function runResolveMutate(
     }
   }
 
+  const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   // Guard: never allow dismissing or hiding a review while any of its inline threads are
-  // unresolved on GitHub — even if those threads are also passed to `--resolve-thread-ids`
-  // in the same command. Reviews must be dismissed/hidden in a separate command afterward.
-  const reviewIdsToCheck = [
-    ...new Set([
-      ...(opts.dismissReviewIds ?? []),
-      ...(opts.minimizeCommentIds ?? []).filter(isReviewNodeId),
-    ]),
-  ];
+  // unresolved — even if those threads are also passed to `--resolve-thread-ids` in the same
+  // command. Local markers track each review's unresolved threads across `check` and `apply`,
+  // so already-resolved reviews need zero GraphQL calls; GitHub is only queried when local
+  // state still has unresolved thread IDs (to check for external resolution) or has no record yet.
+  const reviewIdsToCheck = collectReviewIdsToGuard(opts.dismissReviewIds, opts.minimizeCommentIds);
   const blockedByReview =
     reviewIdsToCheck.length > 0
-      ? await findUnresolvedThreadsByReviewId(prNumber, repo, reviewIdsToCheck)
+      ? await resolveBlockedReviews(stateKey, prNumber, repo, reviewIdsToCheck)
       : new Map<string, string[]>();
-  const blockedErrors = [...blockedByReview.entries()].map(([reviewId, threadIds]) => {
-    const noun = threadIds.length === 1 ? "thread remains" : "threads remain";
-    return `Refused to dismiss/hide review ${reviewId}: ${threadIds.length} unresolved inline ${noun} (${threadIds.join(", ")}). Resolve all inline threads first, then dismiss/hide the review in a separate command.`;
-  });
+  const blockedErrors = formatBlockedReviewErrors(blockedByReview);
   const allowedDismissReviewIds = opts.dismissReviewIds?.filter((id) => !blockedByReview.has(id));
   const allowedMinimizeCommentIds = opts.minimizeCommentIds?.filter(
     (id) => !blockedByReview.has(id),
@@ -84,9 +81,7 @@ export async function runResolveMutate(
       minimizedComments: [],
       dismissedReviews: [],
       errors: blockedErrors,
-      instructions: [
-        "Resolve every unresolved inline thread belonging to the blocked review(s) first, then run a separate `apply review` command to dismiss/hide the review.",
-      ],
+      instructions: [BLOCKED_REVIEW_INSTRUCTION],
     };
   }
 
@@ -110,10 +105,7 @@ export async function runResolveMutate(
   );
   if (blockedErrors.length > 0) {
     result.errors.push(...blockedErrors);
-    result.instructions = [
-      ...(result.instructions ?? []),
-      "Resolve every unresolved inline thread belonging to the blocked review(s) first, then run a separate `apply review` command to dismiss/hide the review.",
-    ];
+    result.instructions = [...(result.instructions ?? []), BLOCKED_REVIEW_INSTRUCTION];
   }
   const adopted = new Set(adoptedReplyThreads(result));
   let adoptedTranscripts: Map<string, string> | undefined;
@@ -141,6 +133,9 @@ export async function runResolveMutate(
         );
       }),
     );
+  }
+  if (result.resolvedThreads.length > 0) {
+    await pruneResolvedReviewThreads(stateKey, result.resolvedThreads);
   }
   return result;
 }
