@@ -37,7 +37,7 @@ describe("markReviewInlineThreadMarkers", () => {
       [
         thread({ id: "thread-b", reviewId: "PRR_1", isResolved: true }),
         thread({ id: "thread-a", reviewId: "PRR_1", isResolved: false }),
-        thread({ id: "thread-c", reviewId: "PRR_2", isResolved: false }),
+        thread({ id: "thread-c", reviewId: "PRR_2", isResolved: undefined }),
         thread({ id: "thread-ignored" }),
       ],
       ["PRR_1", "PRR_EMPTY"],

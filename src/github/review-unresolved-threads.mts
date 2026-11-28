@@ -1,5 +1,5 @@
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
-import { githubOperation, isCcrTransport } from "./transport.mts";
+import { githubOperation } from "./transport.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
 import { chunksOf } from "../util/chunks.mts";
 
@@ -96,11 +96,14 @@ export async function checkThreadsStillUnresolved(
       }
     },
     async () => {
-      if (!isCcrTransport()) return;
       const wanted = new Set(unique);
       const feedback = await readRestFeedback(pr, repo);
+      if (feedback.unavailable?.some((item) => item.field === "reviewThreads.status")) {
+        for (const id of unique) unresolved.add(id);
+        return;
+      }
       for (const thread of feedback.threads) {
-        if (wanted.has(thread.id) && thread.isResolved === false) unresolved.add(thread.id);
+        if (wanted.has(thread.id) && thread.isResolved !== true) unresolved.add(thread.id);
       }
     },
   );
@@ -148,15 +151,17 @@ export async function findUnresolvedThreadsByReviewId(
           const reviewId = thread.comments.nodes[0]?.pullRequestReview?.id;
           record(reviewId, thread.id);
         }
-        if (!connection.pageInfo.hasNextPage || !connection.pageInfo.endCursor) break;
+        if (!connection.pageInfo.hasNextPage) break;
+        if (!connection.pageInfo.endCursor) {
+          throw new Error("Review thread pagination returned hasNextPage without endCursor");
+        }
         cursor = connection.pageInfo.endCursor;
       }
     },
     async () => {
-      if (!isCcrTransport()) return;
       const feedback = await readRestFeedback(pr, repo);
       for (const thread of feedback.threads) {
-        if (thread.isResolved === false) record(thread.reviewId, thread.id);
+        if (thread.isResolved !== true) record(thread.reviewId, thread.id);
       }
     },
   );

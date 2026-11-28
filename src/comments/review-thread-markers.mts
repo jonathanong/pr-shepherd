@@ -18,7 +18,7 @@ function groupInlineThreadsByReview(
       unresolved: new Set<string>(),
     };
     entry.all.add(thread.id);
-    if (thread.isResolved === false) entry.unresolved.add(thread.id);
+    if (thread.isResolved !== true) entry.unresolved.add(thread.id);
     byReview.set(thread.reviewId, entry);
   }
   return new Map(

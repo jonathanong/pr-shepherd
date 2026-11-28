@@ -6,12 +6,12 @@ Which review threads, PR comments, and reviews Shepherd surfaces, how the seen-m
 
 ## Review threads vs PR comments
 
-| Type           | Description                                                        | GraphQL field                            | Report field      |
-| -------------- | ------------------------------------------------------------------ | ---------------------------------------- | ----------------- |
-| Review thread  | Inline code comment on a file and line                             | `pullRequest.reviewThreads`              | `threads`         |
-| PR comment     | Top-level comment, not attached to a file                          | `pullRequest.comments`                   | `comments`        |
-| Review summary | PR-level body of a `COMMENTED` review (for example a bot overview) | `pullRequest.reviews(states: COMMENTED)` | `reviewSummaries` |
-| Approval       | `APPROVED` review                                                  | `pullRequest.reviews(states: APPROVED)`  | `approvedReviews` |
+| Type           | Description                                                                       | GraphQL field                                         | Report field      |
+| -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------- |
+| Review thread  | Inline code comment on a file and line                                            | `pullRequest.reviewThreads`                           | `threads`         |
+| PR comment     | Top-level comment, not attached to a file                                         | `pullRequest.comments`                                | `comments`        |
+| Review summary | PR-level body of a `COMMENTED` or `DISMISSED` review (for example a bot overview) | `pullRequest.reviews(states: [COMMENTED, DISMISSED])` | `reviewSummaries` |
+| Approval       | `APPROVED` review                                                                 | `pullRequest.reviews(states: APPROVED)`               | `approvedReviews` |
 
 A review thread carries its root comment fields (`body`, `author`, `url`, and `reviewId` when GitHub exposes the parent review) plus a `comments[]` transcript of every fetched comment and reply. Text output renders the full transcript, not previews, so the agent does not need a second GitHub fetch.
 
@@ -22,7 +22,7 @@ A review thread carries its root comment fields (`body`, `author`, `url`, and `r
 - the item's `authorType` matches [`iterate.minimize-comments`](configuration.md#iterateminimize-comments--default-bots) (top-level [`bot-usernames`](configuration.md#bot-usernames) extends which authors count as bots, for minimization as well as thread visibility and resolve routing);
 - for a review summary, no known inline child thread from the same review is still unresolved.
 
-Human-authored items are never minimized. [`iterate.minimize-approvals`](configuration.md#iterateminimize-approvals--default-false) adds `APPROVED` reviews to minimization (default off); it does not affect whether `approvedReviews` is reported.
+Human-authored items are never minimized. [`iterate.minimize-superseded-approvals`](configuration.md#iterateminimize-superseded-approvals--default-true) minimizes earlier eligible `APPROVED` reviews from the same author once a newer substantive review supersedes them (default on; opt out with `false`). [`iterate.minimize-approvals`](configuration.md#iterateminimize-approvals--default-false) minimizes all eligible `APPROVED` reviews including the latest (default off). Neither setting affects whether `approvedReviews` is reported.
 
 ### Classification auto-resolve
 

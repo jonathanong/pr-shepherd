@@ -46,6 +46,18 @@ describe("checkThreadsStillUnresolved", () => {
     expect([...still]).toEqual(["PRRT_1"]);
     expect(mockGraphql).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps cached thread IDs unresolved under REST when thread resolution status is unavailable", async () => {
+    mockReadRestFeedback.mockResolvedValueOnce({
+      threads: [{ id: "rest:thread:1", reviewId: "PRR_1" }],
+      unavailable: [{ field: "reviewThreads.status", reason: "unavailable" }],
+    } as never);
+
+    const still = await runWithGithubTransport("rest", () =>
+      checkThreadsStillUnresolved(42, REPO, ["PRRT_1"]),
+    );
+    expect([...still]).toEqual(["PRRT_1"]);
+  });
 });
 
 describe("findUnresolvedThreadsByReviewId", () => {
@@ -104,29 +116,49 @@ describe("findUnresolvedThreadsByReviewId", () => {
     expect(mockGraphql).toHaveBeenCalledTimes(2);
   });
 
-  it("checks CCR REST thread resolution status and skips standard REST where status is unavailable", async () => {
-    mockReadRestFeedback.mockResolvedValue({
+  it("fails closed when GraphQL pagination reports hasNextPage without endCursor", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: {
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              pageInfo: { hasNextPage: true, endCursor: null },
+              nodes: [],
+            },
+          },
+        },
+      },
+    });
+
+    await expect(findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1"])).rejects.toThrow(
+      "Review thread pagination returned hasNextPage without endCursor",
+    );
+  });
+
+  it("treats unknown REST thread resolution as blocking and respects CCR resolved flags", async () => {
+    mockReadRestFeedback.mockResolvedValueOnce({
+      threads: [{ id: "rest-thread-unknown", reviewId: "PRR_1" }],
+      unavailable: [{ field: "reviewThreads.status", reason: "unavailable" }],
+    } as never);
+
+    const standard = await runWithGithubTransport("rest", () =>
+      findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1", "PRR_NO_THREADS"]),
+    );
+    expect([...standard.entries()]).toEqual([["PRR_1", ["rest-thread-unknown"]]]);
+    expect(mockReadRestFeedback).toHaveBeenCalledTimes(1);
+
+    mockReadRestFeedback.mockResolvedValueOnce({
       threads: [
         { id: "rest-thread-1", reviewId: "PRR_1", isResolved: false },
         { id: "rest-thread-2", reviewId: "PRR_1", isResolved: true },
       ],
+      unavailable: [],
     } as never);
 
-    const standard = await runWithGithubTransport("rest", () =>
+    const ccr = await runWithGithubTransport("rest", () =>
       findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1"]),
     );
-    expect(standard.size).toBe(0);
-    expect(mockReadRestFeedback).not.toHaveBeenCalled();
-
-    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
-    try {
-      const ccr = await runWithGithubTransport("rest", () =>
-        findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1"]),
-      );
-      expect([...ccr.entries()]).toEqual([["PRR_1", ["rest-thread-1"]]]);
-      expect(mockReadRestFeedback).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.unstubAllEnvs();
-    }
+    expect([...ccr.entries()]).toEqual([["PRR_1", ["rest-thread-1"]]]);
+    expect(mockReadRestFeedback).toHaveBeenCalledTimes(2);
   });
 });
