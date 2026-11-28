@@ -5,6 +5,10 @@ import {
   readApplyReviewPreflight,
   type ApplyReviewPreflight,
 } from "../github/apply-review-preflight.mts";
+import {
+  findUnresolvedThreadsByReviewId,
+  isReviewNodeId,
+} from "../github/review-unresolved-threads.mts";
 import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBodies } from "../threads/transcript.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
@@ -47,8 +51,47 @@ export async function runResolveMutate(
     }
   }
 
+  // Guard: never allow dismissing or hiding a review while any of its inline threads are
+  // unresolved on GitHub — even if those threads are also passed to `--resolve-thread-ids`
+  // in the same command. Reviews must be dismissed/hidden in a separate command afterward.
+  const reviewIdsToCheck = [
+    ...new Set([
+      ...(opts.dismissReviewIds ?? []),
+      ...(opts.minimizeCommentIds ?? []).filter(isReviewNodeId),
+    ]),
+  ];
+  const blockedByReview =
+    reviewIdsToCheck.length > 0
+      ? await findUnresolvedThreadsByReviewId(prNumber, repo, reviewIdsToCheck)
+      : new Map<string, string[]>();
+  const blockedErrors = [...blockedByReview.entries()].map(([reviewId, threadIds]) => {
+    const noun = threadIds.length === 1 ? "thread remains" : "threads remain";
+    return `Refused to dismiss/hide review ${reviewId}: ${threadIds.length} unresolved inline ${noun} (${threadIds.join(", ")}). Resolve all inline threads first, then dismiss/hide the review in a separate command.`;
+  });
+  const allowedDismissReviewIds = opts.dismissReviewIds?.filter((id) => !blockedByReview.has(id));
+  const allowedMinimizeCommentIds = opts.minimizeCommentIds?.filter(
+    (id) => !blockedByReview.has(id),
+  );
+  const hasAllowedMutations =
+    (opts.resolveThreadIds?.length ?? 0) > 0 ||
+    (opts.replyThreadIds?.length ?? 0) > 0 ||
+    (allowedMinimizeCommentIds?.length ?? 0) > 0 ||
+    (allowedDismissReviewIds?.length ?? 0) > 0;
+  if (!hasAllowedMutations && blockedErrors.length > 0) {
+    return {
+      repliedThreads: [],
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: blockedErrors,
+      instructions: [
+        "Resolve every unresolved inline thread belonging to the blocked review(s) first, then run a separate `apply review` command to dismiss/hide the review.",
+      ],
+    };
+  }
+
   // Iterate capability-checks and routes its generated commands. Direct apply
-  // requests are user-directed: forward every supplied ID unchanged and let
+  // requests are user-directed: forward every remaining supplied ID unchanged and let
   // GitHub report whether each requested mutation is permitted or applicable.
   // Only generated durable-state commands carry `--adopt-existing-replies`.
   const result = await applyResolveOptions(
@@ -57,14 +100,21 @@ export async function runResolveMutate(
     {
       resolveThreadIds: opts.resolveThreadIds,
       replyThreadIds: opts.replyThreadIds,
-      minimizeCommentIds: opts.minimizeCommentIds,
-      dismissReviewIds: opts.dismissReviewIds,
+      minimizeCommentIds: allowedMinimizeCommentIds,
+      dismissReviewIds: allowedDismissReviewIds,
       dismissMessage: opts.dismissMessage,
       requireSha: opts.requireSha,
       ...(opts.adoptExistingReplies && { adoptExistingReplies: true }),
     },
     ...(preflight ? [preflight] : []),
   );
+  if (blockedErrors.length > 0) {
+    result.errors.push(...blockedErrors);
+    result.instructions = [
+      ...(result.instructions ?? []),
+      "Resolve every unresolved inline thread belonging to the blocked review(s) first, then run a separate `apply review` command to dismiss/hide the review.",
+    ];
+  }
   const adopted = new Set(adoptedReplyThreads(result));
   let adoptedTranscripts: Map<string, string> | undefined;
   if (adopted.size) {

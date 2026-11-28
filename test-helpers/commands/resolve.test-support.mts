@@ -26,6 +26,14 @@ vi.mock("../../src/github/reply-thread-transcripts.mts", () => ({
 vi.mock("../../src/github/apply-review-preflight.mts", () => ({
   readApplyReviewPreflight: async () => null,
 }));
+vi.mock("../../src/github/review-unresolved-threads.mts", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/github/review-unresolved-threads.mts")>();
+  return {
+    ...actual,
+    findUnresolvedThreadsByReviewId: vi.fn().mockResolvedValue(new Map()),
+  };
+});
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -45,6 +53,7 @@ import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchReplyThreadTranscripts } from "../../src/github/reply-thread-transcripts.mts";
+import { findUnresolvedThreadsByReviewId } from "../../src/github/review-unresolved-threads.mts";
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
 import { applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
@@ -60,6 +69,7 @@ import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockFetchReplyThreadTranscripts = vi.mocked(fetchReplyThreadTranscripts);
+const mockFindUnresolvedThreadsByReviewId = vi.mocked(findUnresolvedThreadsByReviewId);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
@@ -167,6 +177,7 @@ export function registerHooks(): void {
       fingerprint: testFingerprint(),
     });
     mockFetchReplyThreadTranscripts.mockResolvedValue(new Map());
+    mockFindUnresolvedThreadsByReviewId.mockResolvedValue(new Map());
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],
       resolvedThreads: [],
@@ -194,6 +205,7 @@ export {
   mockApplyResolveOptions,
   mockFetchPrBatch,
   mockFetchReplyThreadTranscripts,
+  mockFindUnresolvedThreadsByReviewId,
   mockGetCurrentPrNumber,
   mockLoadConfig,
   mockLoadSeenMap,
