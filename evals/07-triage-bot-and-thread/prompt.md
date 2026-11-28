@@ -44,5 +44,6 @@ https://github.com/owner/repo/pull/42 and got this back — what do we do now?
 1. Fix each warranted item.
 2. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 3. Commit and push any changes to the PR head.
-4. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_thrash_84 --message "$CHANGE_MESSAGE" --dismiss-review-ids PRR_bot_overdue_84 --require-sha HEAD`
-5. Rerun Shepherd now.
+4. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_thrash_84 --message "$CHANGE_MESSAGE" --require-sha HEAD`
+5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed to dismiss and hide resolved reviews: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids PRR_bot_overdue_84 --dismiss-review-ids PRR_bot_overdue_84 --message "$CHANGE_MESSAGE" --require-sha HEAD`
+6. Rerun Shepherd now.
