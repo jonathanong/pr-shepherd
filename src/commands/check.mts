@@ -67,7 +67,12 @@ import {
 } from "./iterate/thread-mutation-routing.mts";
 import { loadClassifyRules } from "../classify/loader.mts";
 import { filterSuppressedActivity } from "./check-activity.mts";
-import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
+import {
+  buildClassifyIndex,
+  partitionBatch,
+  stripSuppressedThreadReplies,
+  type BatchPartition,
+} from "../classify/apply.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
 import type {
@@ -316,6 +321,10 @@ async function runScopedCheck(
   const ruleSet = await loadClassifyRules(getEffectiveCwd(), config.standardRules);
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
   const partition = partitionBatch(classifyIndex, batchData);
+  const reviewThreads = stripSuppressedThreadReplies(
+    batchData.reviewThreads,
+    partition.suppressedThreadReplyIds,
+  );
   const merged = await attachAndMergeCheckAnnotations(
     { passing, failing: triagedBase, skipped, filtered },
     seenMap,
@@ -351,7 +360,7 @@ async function runScopedCheck(
   );
   const deniedRuleAutoResolveThreadIds = new Set(
     partition.ruleAutoResolveThreadIds.filter((id) => {
-      const thread = batchData.reviewThreads.find((candidate) => candidate.id === id);
+      const thread = reviewThreads.find((candidate) => candidate.id === id);
       return (
         thread?.isResolved !== false ||
         !canGenerateItemMutation(
@@ -363,7 +372,7 @@ async function runScopedCheck(
       );
     }),
   );
-  const visibleThreadCandidates = batchData.reviewThreads.filter(
+  const visibleThreadCandidates = reviewThreads.filter(
     (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
   );
   const resolveOtherHumanThreads = config.iterate["resolve-other-human-threads"] ?? "none";
@@ -588,7 +597,7 @@ async function runScopedCheck(
             partition.suppressedCommentIds.has(c.id) && !deniedRuleAutoResolveCommentIds.has(c.id),
         )
         .map((c) => markSeen(stateKey, c.id, c.body)),
-      ...batchData.reviewThreads
+      ...reviewThreads
         .filter(
           (t) =>
             partition.suppressedThreadIds.has(t.id) && !deniedRuleAutoResolveThreadIds.has(t.id),
@@ -610,7 +619,7 @@ async function runScopedCheck(
   const authorizedPartition: BatchPartition = {
     ...partition,
     ruleAutoResolveThreadIds: partition.ruleAutoResolveThreadIds.filter((id) => {
-      const thread = batchData.reviewThreads.find((candidate) => candidate.id === id);
+      const thread = reviewThreads.find((candidate) => candidate.id === id);
       return (
         thread?.isResolved === false &&
         canGenerateItemMutation(
@@ -657,7 +666,7 @@ async function runScopedCheck(
   } = await applySuppressedRuleAutoResolve({
     enabled: opts.autoMinimizeSuppressed === true,
     partition: authorizedPartition,
-    batch: batchData,
+    batch: { ...batchData, reviewThreads },
   });
   const visibleMutationThreadIds = new Set(
     [...budgeted.threads.activeThreads, ...budgeted.threads.resolutionOnlyThreads].map(

@@ -15,7 +15,8 @@ import sourceryReviewGuide from "./sourcery-review-guide.mts";
 
 /**
  * Bundled classification rules that `classify.standard` can enable by name.
- * Each rule matches conversation comments (`pr-comment`) only.
+ * Rules match conversation comments (`pr-comment`) only, except `coderabbit-notices` also
+ * suppresses CodeRabbit's chat rate-limit notice on review-thread replies (`review-thread-reply`).
  */
 export const STANDARD_RULES: Readonly<Record<string, ClassifyRule>> = {
   "claude-notices": claudeNotices,

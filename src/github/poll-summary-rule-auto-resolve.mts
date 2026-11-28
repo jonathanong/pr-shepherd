@@ -131,6 +131,7 @@ export async function applySummaryRuleAutoResolve(input: {
   const partition: BatchPartition = {
     suppressedCommentIds: new Set(comments.map((item) => item.id)),
     suppressedThreadIds: new Set(threads.map((item) => item.id)),
+    suppressedThreadReplyIds: new Set(),
     suppressedReviewSummaryIds: new Set(summaries.map((item) => item.id)),
     suppressedChangesRequestedIds: new Set(),
     ruleAutoResolveCommentIds: comments.map((item) => item.id),

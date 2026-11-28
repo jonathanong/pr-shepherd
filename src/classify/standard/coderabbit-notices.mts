@@ -18,6 +18,24 @@ const STATUS_COMMENTS = [
   /^> \[!CAUTION\]\n> Failed to replace \(edit\) comment\. This is likely due to insufficient permissions or the comment being deleted\.\n> \n> <details>\n> <summary>Error details<\/summary>\n> \n> ```\n> [^`\n]*\n> ```\n> \n> <\/details>$/,
 ];
 
+const CHAT_WAIT = String.raw`\d+ (?:hours?(?:, \d+ minutes?,? and \d+ seconds?| and \d+ (?:minutes?|seconds?))?|minutes?(?: and \d+ seconds?)?|seconds?)`;
+const CHAT_COUNT = String.raw`(?:\d{1,3}(?:,\d{3})+|\d+)`;
+
+/** CodeRabbit's chat rate-limit notice, posted on review-thread replies and conversation comments. */
+const CHAT_RATE_LIMIT = new RegExp(
+  String.raw`^### Rate Limit Exceeded\n\n` +
+    String.raw`(?:` +
+    "`@[A-Za-z0-9_-]+(?:\\[bot\\])?`" +
+    String.raw`|@[A-Za-z0-9_-]+(?:\[bot\])?|You) (?:have|has) exceeded the limit for the number of chat messages per (?:hour|minute|day)\. ` +
+    String.raw`Please wait \*\*${CHAT_WAIT}\*\* before sending another message\.` +
+    String.raw`(?:\n\nCodeRabbit didn['’]t process this message and won['’]t process it later\. ` +
+    String.raw`Send it again after \*\*\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC\*\*\.)?` +
+    String.raw`(?:\n\nYou can send ${CHAT_COUNT} chat messages an? (?:hour|minute|day) in repositories owned by ` +
+    "`[A-Za-z0-9_-]+`" +
+    String.raw`\. The whole allowance comes back at once each (?:hour|minute|day), and a burst of messages within a few seconds pauses chat for about a minute\. ` +
+    String.raw`\[Chat rate limits\]\(https:\/\/docs\.coderabbit\.ai\/[^\s)]*\))?$`,
+);
+
 /** One "Finishing Touches" option group: a bold title and only checkbox lines with plain labels. */
 const FINISHING_TOUCH_GROUP =
   "<details open>\\n<summary><strong>[^<\\n]+<\\/strong><\\/summary>\\n<dl>\\n<dd>\\n\\n(?:- \\[ \\] <!-- \\{[^\\n]*\\} --> [^<\\n]+\\n)+\\n<\\/dd>\\n<\\/dl>\\n<\\/details>\\n";
@@ -34,6 +52,7 @@ const AUTOPILOT_BLOCK =
 /** Strips CodeRabbit's footer and header blocks so only the notice envelope remains. */
 function stripChrome(body: string): string {
   return body
+    .replace(/\r\n/g, "\n")
     .trim()
     .replace(/\n<!-- tips_start -->[\s\S]*?<!-- tips_end -->$/, "")
     .trim()
@@ -81,13 +100,29 @@ function isQuotedNotice(quoted: string): boolean {
 
 /**
  * CodeRabbit progress, rate-limit, review-skipped and draft notices, its status-only command
- * replies, and its zero-findings, skipped-autofix, and failed-edit status comments. If the
+ * replies, its zero-findings, skipped-autofix, and failed-edit status comments, and its chat
+ * rate-limit notices (on conversation comments and review-thread replies). If a conversation
  * comment is later edited into a PR walkthrough, its new body no longer matches and Shepherd
  * surfaces the edited minimized comment to the agent.
  */
 const rule: ClassifyRule = (item) => {
+  if (isBotItem(item, ["coderabbitai"], ["review-thread-reply"])) {
+    const body = stripChrome(item.body);
+    if (!CHAT_RATE_LIMIT.test(body)) return null;
+    return {
+      suppress: true,
+      reason: "CodeRabbit chat rate-limit notice",
+    };
+  }
   if (!isBotItem(item, ["coderabbitai"], ["pr-comment"])) return null;
   const body = stripChrome(item.body);
+  if (CHAT_RATE_LIMIT.test(body)) {
+    return {
+      autoResolve: true,
+      suppress: true,
+      reason: "CodeRabbit chat rate-limit notice",
+    };
+  }
   const envelope = body.match(NOTICE_ENVELOPE)?.[2];
   const quoted = envelope === undefined ? undefined : stripReviewInfo(envelope).trim();
   const isStatus = COMMAND_REPLY.test(body) || STATUS_COMMENTS.some((notice) => notice.test(body));

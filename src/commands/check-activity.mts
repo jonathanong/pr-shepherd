@@ -20,7 +20,10 @@ export function filterSuppressedActivity(
       case "pr-comment":
         return !hidden(item.id, partition.suppressedCommentIds);
       case "review-thread-comment":
-        return !item.threadId || !hidden(item.threadId, partition.suppressedThreadIds);
+        return (
+          !partition.suppressedThreadReplyIds.has(item.id) &&
+          (!item.threadId || !hidden(item.threadId, partition.suppressedThreadIds))
+        );
       case "review-summary":
         return !hidden(item.id, partition.suppressedReviewSummaryIds);
       case "changes-requested-review":

@@ -1,10 +1,18 @@
-import type { BatchPrData, ReviewThread, PrComment, Review } from "../types.mts";
+import type { BatchPrData, ReviewThread } from "../types.mts";
 import type { ClassifyItem, ClassifyAction } from "./types.mts";
 import type { LoadedRule } from "./loader.mts";
 import { collectAction, type CollectedAction } from "./rule-action.mts";
+import {
+  changesRequestedToItem,
+  commentToItem,
+  reviewSummaryToItem,
+  threadReplyToItem,
+  threadToItem,
+} from "./items.mts";
 
 export interface ClassifyIndex {
   suppressedIds: Set<string>;
+  suppressedThreadReplyIds: Set<string>;
   autoResolveIds: Set<string>;
   ruleReasons: Map<string, string[]>;
 }
@@ -12,6 +20,7 @@ export interface ClassifyIndex {
 export interface BatchPartition {
   suppressedCommentIds: Set<string>;
   suppressedThreadIds: Set<string>;
+  suppressedThreadReplyIds: Set<string>;
   suppressedReviewSummaryIds: Set<string>;
   suppressedChangesRequestedIds: Set<string>;
   ruleAutoResolveCommentIds: string[];
@@ -30,54 +39,6 @@ export function applyRules(rules: LoadedRule[], item: ClassifyItem): ClassifyAct
   };
 }
 
-function threadToItem(t: ReviewThread): ClassifyItem {
-  return {
-    kind: "review-thread",
-    id: t.id,
-    author: t.author,
-    authorType: t.authorType,
-    ...(t.authorAssociation !== undefined && { authorAssociation: t.authorAssociation }),
-    body: t.body,
-    url: t.url,
-    path: t.path,
-  };
-}
-
-function commentToItem(c: PrComment): ClassifyItem {
-  return {
-    kind: "pr-comment",
-    id: c.id,
-    author: c.author,
-    authorType: c.authorType,
-    ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
-    body: c.body,
-    url: c.url,
-  };
-}
-
-function reviewSummaryToItem(r: Review): ClassifyItem {
-  return {
-    kind: "review-summary",
-    id: r.id,
-    author: r.author,
-    authorType: r.authorType,
-    ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
-    body: r.body,
-    ...(r.url ? { url: r.url } : {}),
-  };
-}
-
-function changesRequestedToItem(r: Review): ClassifyItem {
-  return {
-    kind: "changes-requested",
-    id: r.id,
-    author: r.author,
-    authorType: r.authorType,
-    ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
-    body: r.body,
-  };
-}
-
 function addToIndex(
   id: string,
   applied: CollectedAction,
@@ -91,12 +52,18 @@ function addToIndex(
 }
 
 function emptyIndex(): ClassifyIndex {
-  return { suppressedIds: new Set(), autoResolveIds: new Set(), ruleReasons: new Map() };
+  return {
+    suppressedIds: new Set(),
+    suppressedThreadReplyIds: new Set(),
+    autoResolveIds: new Set(),
+    ruleReasons: new Map(),
+  };
 }
 
 export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): ClassifyIndex {
   if (rules.length === 0) return emptyIndex();
   const suppressedIds = new Set<string>();
+  const suppressedThreadReplyIds = new Set<string>();
   const autoResolveIds = new Set<string>();
   const ruleReasons = new Map<string, string[]>();
   for (const t of batch.reviewThreads) {
@@ -107,6 +74,12 @@ export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): Cla
       autoResolveIds,
       ruleReasons,
     );
+    // Replies (after the root comment) can be suppressed individually; autoResolve is not supported.
+    for (const reply of (t.comments ?? []).slice(1)) {
+      const applied = collectAction(rules, threadReplyToItem(t, reply));
+      if (applied.suppress) suppressedThreadReplyIds.add(reply.id);
+      if (applied.reasons.length > 0) ruleReasons.set(reply.id, applied.reasons);
+    }
   }
   for (const c of batch.comments) {
     addToIndex(
@@ -131,11 +104,11 @@ export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): Cla
     if (applied.suppress) suppressedIds.add(r.id);
     if (applied.reasons.length > 0) ruleReasons.set(r.id, applied.reasons);
   }
-  return { suppressedIds, autoResolveIds, ruleReasons };
+  return { suppressedIds, suppressedThreadReplyIds, autoResolveIds, ruleReasons };
 }
 
 export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchPartition {
-  const { suppressedIds, autoResolveIds } = index;
+  const { suppressedIds, suppressedThreadReplyIds, autoResolveIds } = index;
   const suppressedCommentIds = new Set(
     batch.comments.filter((c) => suppressedIds.has(c.id)).map((c) => c.id),
   );
@@ -160,6 +133,7 @@ export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchP
   return {
     suppressedCommentIds,
     suppressedThreadIds,
+    suppressedThreadReplyIds: new Set(suppressedThreadReplyIds),
     suppressedReviewSummaryIds,
     suppressedChangesRequestedIds,
     ruleAutoResolveCommentIds,
@@ -167,4 +141,24 @@ export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchP
     ruleAutoResolveReviewSummaryIds,
     ruleReasons: index.ruleReasons,
   };
+}
+
+/**
+ * Return threads with rule-suppressed reply comments removed, leaving each thread's root comment
+ * intact. Threads without matching replies are returned as-is.
+ */
+export function stripSuppressedThreadReplies(
+  threads: ReviewThread[],
+  suppressedReplyIds: ReadonlySet<string>,
+): ReviewThread[] {
+  if (suppressedReplyIds.size === 0) return threads;
+  return threads.map((thread) => {
+    const comments = thread.comments;
+    if (!comments || comments.length <= 1) return thread;
+    const filtered = [
+      comments[0]!,
+      ...comments.slice(1).filter((reply) => !suppressedReplyIds.has(reply.id)),
+    ];
+    return filtered.length === comments.length ? thread : { ...thread, comments: filtered };
+  });
 }

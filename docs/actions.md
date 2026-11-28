@@ -166,7 +166,7 @@ Every one-PR action, default lean format:
 
 ### `activity` review items
 
-`reviewItemsSinceLatestCommit` (the `<N> review items since latest commit` count, the quiet-status change signature, and the lean JSON items with their bodies) omits items that classification rules suppress, using the same partition `check` applies: suppressed PR comments, comments on suppressed threads, suppressed review summaries, and suppressed changes-requested reviews. An item whose automatic minimize or resolve was denied stays listed, because `check` surfaces it once. `reviewRoundCount` counts raw review rounds from GitHub and is not filtered.
+`reviewItemsSinceLatestCommit` (the `<N> review items since latest commit` count, the quiet-status change signature, and the lean JSON items with their bodies) omits items that classification rules suppress, using the same partition `check` applies: suppressed PR comments, comments on suppressed threads, suppressed review-thread replies, suppressed review summaries, and suppressed changes-requested reviews. An item whose automatic minimize or resolve was denied stays listed, because `check` surfaces it once. `reviewRoundCount` counts raw review rounds from GitHub and is not filtered.
 
 ### `ignored` and `superseded` lines
 
@@ -973,10 +973,10 @@ import type { ClassifyRule } from "pr-shepherd/classify";
 export default function rule(item: ClassifyItem): ClassifyAction | null {}
 ```
 
-The `ClassifyItem` union covers four kinds: `"review-thread"`, `"pr-comment"`, `"review-summary"`, and `"changes-requested"`. Each item carries `id`, `author`, `authorType`, optional raw GitHub `authorAssociation`, `body`, and (for threads) `path`. Association values are context only; rules decide how, if at all, to use them.
+The `ClassifyItem` union covers five kinds: `"review-thread"`, `"review-thread-reply"`, `"pr-comment"`, `"review-summary"`, and `"changes-requested"`. Each item carries `id`, `author`, `authorType`, optional raw GitHub `authorAssociation`, `body`, and (for threads and thread replies) `path` (plus `threadId` on `"review-thread-reply"`). Association values are context only; rules decide how, if at all, to use them.
 
-- **`suppress: true`:** hides the item from agent output. The seen marker is still written, so the item does not re-surface as first-look on the next tick.
-- **`autoResolve: true`:** routes the item's ID into the resolve/minimize mutation: threads to `--resolve-thread-ids`, PR comments and review summaries to `--minimize-comment-ids`. Combined with `suppress: true` and [`actions.auto-minimize-suppressed`](configuration.md#actionsauto-minimize-suppressed--default-true) `true` (the default), Shepherd performs the authorized mutation itself, records it ([Classification auto-resolve](#classification-auto-resolve)), and leaves only failed IDs on the generated `apply review` command. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message).
+- **`suppress: true`:** hides the item from agent output. The seen marker is still written, so the item does not re-surface as first-look on the next tick. On `"review-thread-reply"`, removes only that reply from the thread's transcript, Shepherd-marker detection, and activity digest without hiding the parent thread.
+- **`autoResolve: true`:** routes the item's ID into the resolve/minimize mutation: threads to `--resolve-thread-ids`, PR comments and review summaries to `--minimize-comment-ids`. Combined with `suppress: true` and [`actions.auto-minimize-suppressed`](configuration.md#actionsauto-minimize-suppressed--default-true) `true` (the default), Shepherd performs the authorized mutation itself, records it ([Classification auto-resolve](#classification-auto-resolve)), and leaves only failed IDs on the generated `apply review` command. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message) or `"review-thread-reply"` items (individual inline replies cannot be minimized and must not resolve their parent thread).
 - **`reason`:** optional note printed in the auto-resolve line and stored as `ruleReason`.
 
 - Rules from multiple files combine permissively: `suppress` and `autoResolve` are OR'd across all matching rules for an item, and every non-empty `reason` is kept.

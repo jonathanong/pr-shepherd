@@ -65,25 +65,38 @@ export async function evaluatePollSummaryReview(
     const truncated = thread.comments.pageInfo.hasPreviousPage;
     if (truncated) incomplete = true;
     const root = thread.comments.nodes[0];
-    const transcript = threadTranscriptBodies(thread.comments.nodes.map((c) => c.body));
+    const path = thread.path ?? root?.path ?? null;
+    const replies = thread.comments.nodes
+      .slice(1)
+      .filter(
+        (reply) =>
+          !summaryRuleAction(
+            rules,
+            "review-thread-reply",
+            reply,
+            reply.id,
+            path,
+            reply.body,
+            thread.id,
+          ).suppress,
+      );
+    const visibleComments = root ? [root, ...replies] : [];
+    const filteredThread =
+      visibleComments.length === thread.comments.nodes.length
+        ? thread
+        : { ...thread, comments: { ...thread.comments, nodes: visibleComments } };
+    const transcript = threadTranscriptBodies(visibleComments.map((c) => c.body));
     // The window's last comment is the thread's last only when nothing lies beyond it.
     const ended =
       thread.isResolved === true &&
       !truncated &&
-      threadEndedByShepherd({ body: root?.body ?? "", comments: thread.comments.nodes });
+      threadEndedByShepherd({ body: root?.body ?? "", comments: visibleComments });
     if (!ended)
       actions.threads.set(
         thread.id,
-        summaryRuleAction(
-          rules,
-          "review-thread",
-          root,
-          thread.id,
-          thread.path ?? root?.path ?? null,
-          root?.body ?? "",
-        ),
+        summaryRuleAction(rules, "review-thread", root, thread.id, path, root?.body ?? ""),
       );
-    return { thread, truncated, root, transcript, ended };
+    return { thread: filteredThread, truncated, root, transcript, ended };
   });
 
   const handled: SummaryAutoResolve =

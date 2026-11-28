@@ -968,5 +968,30 @@
     "expect": {
       "suppress": true
     }
+  },
+  {
+    "name": "coderabbit-chat-rate-limit-reply",
+    "rule": "coderabbit-notices",
+    "kind": "review-thread-reply",
+    "alsoMatchesKinds": ["pr-comment"],
+    "author": "coderabbitai",
+    "url": "https://github.com/jongleberry/no-mistakes/pull/4786#discussion_r4725523111",
+    "body": "### Rate Limit Exceeded\n\n`@jonathanong` have exceeded the limit for the number of chat messages per hour. Please wait **18 minutes and 14 seconds** before sending another message.\n\nCodeRabbit didn't process this message and won't process it later. Send it again after **2026-11-28 04:55:42 UTC**.\n\nYou can send 50 chat messages an hour in repositories owned by `jongleberry`. The whole allowance comes back at once each hour, and a burst of messages within a few seconds pauses chat for about a minute. [Chat rate limits](https://docs.coderabbit.ai/guide/chat#chat-rate-limits)",
+    "expect": {
+      "suppress": true
+    }
+  },
+  {
+    "name": "coderabbit-chat-rate-limit-comment",
+    "rule": "coderabbit-notices",
+    "kind": "pr-comment",
+    "alsoMatchesKinds": ["review-thread-reply"],
+    "author": "coderabbitai",
+    "url": "https://github.com/jongleberry/no-mistakes/pull/4786#discussion_r4725523111",
+    "body": "### Rate Limit Exceeded\n\n`@jonathanong` have exceeded the limit for the number of chat messages per hour. Please wait **18 minutes and 14 seconds** before sending another message.\n\nCodeRabbit didn't process this message and won't process it later. Send it again after **2026-11-28 04:55:42 UTC**.\n\nYou can send 50 chat messages an hour in repositories owned by `jongleberry`. The whole allowance comes back at once each hour, and a burst of messages within a few seconds pauses chat for about a minute. [Chat rate limits](https://docs.coderabbit.ai/guide/chat#chat-rate-limits)",
+    "expect": {
+      "suppress": true,
+      "autoResolve": true
+    }
   }
 ]

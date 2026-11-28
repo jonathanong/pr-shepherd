@@ -11,23 +11,35 @@ interface Fixture {
 }
 interface NoticeFixture extends Fixture {
   readonly rule: string;
+  readonly alsoMatchesKinds?: readonly ClassifyItemKind[];
   readonly expect: { readonly suppress: boolean; readonly autoResolve?: boolean };
 }
+
+const ALL_KINDS: readonly ClassifyItemKind[] = [
+  "pr-comment",
+  "review-thread",
+  "review-thread-reply",
+  "review-summary",
+  "changes-requested",
+];
 
 const readFixtures = <T,>(file: string): T[] =>
   JSON.parse(readFileSync(new URL(`./__fixtures__/${file}`, import.meta.url), "utf8")) as T[];
 const notices = readFixtures<NoticeFixture>("notices.json");
 const mixed = readFixtures<Fixture>("mixed.json");
 
-const item = (f: Fixture, overrides: Partial<ClassifyItem> = {}): ClassifyItem =>
-  ({
-    kind: f.kind,
+const item = (f: Fixture, overrides: Partial<ClassifyItem> = {}): ClassifyItem => {
+  const kind = overrides.kind ?? f.kind;
+  return {
+    kind,
     id: `id-${f.name}`,
+    ...(kind === "review-thread-reply" && { threadId: `thread-${f.name}` }),
     author: f.author,
     authorType: "Bot",
     body: f.body,
     ...overrides,
-  }) as ClassifyItem;
+  } as ClassifyItem;
+};
 
 /** Rules whose whole comment is a generated report, so trailing headings are part of it. */
 const WHOLE_REPORT_RULES = new Set(["codecov-report"]);
@@ -61,9 +73,10 @@ describe("standard classification rules", () => {
       expect(matches(item(f, { author: "octocat" }))).toEqual([]);
       expect(matches(item(f, { authorType: "User" }))).toEqual([]);
       expect(matches(item(f, { authorType: "Unknown" }))).toEqual([]);
-      expect(matches(item(f, { kind: "review-summary" }))).toEqual([]);
-      expect(matches(item(f, { kind: "review-thread" }))).toEqual([]);
-      expect(matches(item(f, { kind: "changes-requested" }))).toEqual([]);
+      const allowedKinds = new Set<ClassifyItemKind>([f.kind, ...(f.alsoMatchesKinds ?? [])]);
+      for (const kind of ALL_KINDS) {
+        if (!allowedKinds.has(kind)) expect(matches(item(f, { kind }))).toEqual([]);
+      }
     });
 
     it.skipIf(WHOLE_REPORT_RULES.has(f.rule))(
