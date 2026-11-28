@@ -9,5 +9,5 @@
 
 ## Instructions
 
-1. Run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids PRR_bot_approval_minimize`
+1. Run to hide resolved reviews: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids PRR_bot_approval_minimize`
 2. Rerun Shepherd now.

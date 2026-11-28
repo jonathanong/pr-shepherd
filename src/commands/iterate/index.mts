@@ -12,7 +12,6 @@ import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleTriage } from "./triage.mts";
 import { deferQueuedConflictReviewWork } from "./queued-conflict-deferral.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
-import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { hasCheckDrivenActionableWork, isQueuedConflict } from "../check-annotations.mts";
 import { buildReadyMergeOutcome, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
@@ -152,39 +151,38 @@ async function runIterateCore(
           },
         };
 
-  const { minimizeIds, selfMinimizeIds, firstLookSummaries, editedSummaries, surfacedApprovals } =
-    classifyReviewSummaries(
-      {
-        firstLook: report.firstLookSummaries,
-        seen: report.reviewSummaries,
-        edited: report.editedSummaries,
-      },
-      report.approvedReviews,
-      config.iterate["minimize-approvals"],
-      config.iterate["minimize-comments"],
-      botUsernames,
-      [
-        ...report.threads.actionable,
-        ...report.threads.resolutionOnly,
-        ...(report.heldThreadReviewIds ?? []).map((reviewId) => ({ reviewId })),
-      ],
-      report.ruleAutoResolveReviewSummaryIds,
-    );
-  // Minimize already-seen review summaries in-process so they never become agent-facing work.
-  // GitHub can still return a null/error/rate-limit result per ID without
-  // throwing (autoMinimizeComments reports this via `errors`, not a rejection);
-  // any ID it did not confirm minimized falls back into the agent-facing set so
-  // the apply command remains a working fallback instead of silently dropping it.
-  let reviewSummaryIds = minimizeIds;
-  if (selfMinimizeIds.length > 0 && readOnly) {
-    reviewSummaryIds = [...reviewSummaryIds, ...selfMinimizeIds];
-  } else if (selfMinimizeIds.length > 0) {
-    checkContext.invalidateReceiptSummary();
-    const { minimized } = await autoMinimizeComments(selfMinimizeIds);
-    const minimizedIds = new Set(minimized);
-    const unminimized = selfMinimizeIds.filter((id) => !minimizedIds.has(id));
-    if (unminimized.length > 0) reviewSummaryIds = [...reviewSummaryIds, ...unminimized];
-  }
+  const blockedThreadRefs = [
+    ...report.threads.actionable,
+    ...report.threads.resolutionOnly,
+    ...(report.heldThreadReviewIds ?? []).map((reviewId) => ({ reviewId })),
+    ...(report.unresolvedThreadReviewIds ?? []).map((reviewId) => ({ reviewId })),
+  ];
+  const blockedReviewIds = new Set(
+    blockedThreadRefs.flatMap((thread) => (thread.reviewId !== undefined ? [thread.reviewId] : [])),
+  );
+  const {
+    minimizeIds: reviewSummaryIds,
+    firstLookSummaries,
+    editedSummaries,
+    surfacedApprovals,
+  } = classifyReviewSummaries(
+    {
+      firstLook: report.firstLookSummaries,
+      seen: report.reviewSummaries,
+      edited: report.editedSummaries,
+    },
+    report.approvedReviews,
+    config.iterate["minimize-approvals"],
+    config.iterate["minimize-comments"],
+    botUsernames,
+    blockedThreadRefs,
+    report.ruleAutoResolveReviewSummaryIds,
+    {
+      minimizeSupersededApprovals: config.iterate["minimize-superseded-approvals"],
+      supersededApprovals: report.supersededApprovedReviews,
+      changesRequestedReviews: report.changesRequestedReviews,
+    },
+  );
   // A first look at an already-minimized comment is only an acknowledgment. Edited PR comments
   // (report.comments.edited) are neither: they never block readiness or restart the ready delay.
   // Review items held back by iterate.review-output-max-chars keep the PR out of ready/merge: a
@@ -293,6 +291,7 @@ async function runIterateCore(
       repoOwner,
       repoName,
       botUsernames,
+      blockedReviewIds,
       releasedCheckNames: blockerGate?.releasedNames,
       releasedCheckBlockers: blockerGate?.releasedBlockers,
       ...((unreportedRepair.length > 0 || staleAncestry !== null) && {
@@ -317,6 +316,7 @@ async function runIterateCore(
       editedSummaries,
       surfacedApprovals,
       botUsernames,
+      blockedReviewIds,
       releasedCheckNames: blockerGate?.releasedNames,
       releasedCheckBlockers: blockerGate?.releasedBlockers,
       repairInstructions: [...unreportedRepair, ...staleAncestry.instructions],
@@ -373,6 +373,7 @@ async function runIterateCore(
       editedSummaries,
       surfacedApprovals,
       botUsernames,
+      blockedReviewIds,
       releasedCheckNames: blockerGate?.releasedNames,
       releasedCheckBlockers: blockerGate?.releasedBlockers,
       repairInstructions: [...unreportedRepair, ...staleAncestry.instructions],

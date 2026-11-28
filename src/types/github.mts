@@ -196,13 +196,17 @@ export interface Review {
   author: string;
   authorType: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
-  /** Present for minimizable COMMENTED/APPROVED reviews; false for non-minimizable review rows. */
+  /** Present when GitHub reports the review is already minimized. */
+  isMinimized?: boolean;
+  /** Present for minimizable reviews; false for non-minimizable review rows. */
   viewerCanMinimize?: boolean;
   body: string;
   createdAtUnix?: number;
   edited?: boolean;
   /** True for bot CR re-surfaced after first look (body unchanged). Terse render. */
   staleBotCr?: boolean;
+  /** True when a re-surfaced bot CR is still held back from dismissal by unresolved inline threads. */
+  pendingInlineThreads?: boolean;
   /** Commit OID the review was made against, when available from GraphQL. */
   commitOid?: string;
   /** PR head OID, set on changes-requested reviews only when `commitOid` differs from it. Raw data, not a staleness verdict. */
@@ -291,6 +295,8 @@ export interface BatchPrData extends BatchPrMergeFields {
   changesRequestedReviews: Review[];
   reviewSummaries: Review[];
   approvedReviews: Review[];
+  /** Internal: APPROVED review IDs superseded by a newer review from the same author (including already-minimized reviews). */
+  supersededApprovalIds?: string[];
   checks: CheckRun[];
   mergeQueueChecks?: CheckRun[];
   mergeQueueChecksIncomplete?: true;

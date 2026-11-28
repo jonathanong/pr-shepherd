@@ -5,7 +5,13 @@ import {
   readApplyReviewPreflight,
   type ApplyReviewPreflight,
 } from "../github/apply-review-preflight.mts";
-import { markReplySeen } from "../state/seen-comments.mts";
+import {
+  BLOCKED_REVIEW_INSTRUCTION,
+  collectReviewIdsToGuard,
+  formatBlockedReviewErrors,
+  resolveBlockedReviews,
+} from "./resolve-review-guard.mts";
+import { markReplySeen, pruneResolvedReviewThreads } from "../state/seen-comments.mts";
 import { threadTranscriptBodies } from "../threads/transcript.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
 import { adoptedReplyThreads } from "../comments/uncertain-replies.mts";
@@ -47,8 +53,40 @@ export async function runResolveMutate(
     }
   }
 
+  const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
+  // Guard: never allow dismissing or hiding a review while any of its inline threads are
+  // unresolved — even if those threads are also passed to `--resolve-thread-ids` in the same
+  // command. Local markers track each review's unresolved threads across `check` and `apply`,
+  // so already-resolved reviews need zero GraphQL calls; GitHub is only queried when local
+  // state still has unresolved thread IDs (to check for external resolution) or has no record yet.
+  const reviewIdsToCheck = collectReviewIdsToGuard(opts.dismissReviewIds, opts.minimizeCommentIds);
+  const blockedByReview =
+    reviewIdsToCheck.length > 0
+      ? await resolveBlockedReviews(stateKey, prNumber, repo, reviewIdsToCheck)
+      : new Map<string, string[]>();
+  const blockedErrors = formatBlockedReviewErrors(blockedByReview);
+  const allowedDismissReviewIds = opts.dismissReviewIds?.filter((id) => !blockedByReview.has(id));
+  const allowedMinimizeCommentIds = opts.minimizeCommentIds?.filter(
+    (id) => !blockedByReview.has(id),
+  );
+  const hasAllowedMutations =
+    (opts.resolveThreadIds?.length ?? 0) > 0 ||
+    (opts.replyThreadIds?.length ?? 0) > 0 ||
+    (allowedMinimizeCommentIds?.length ?? 0) > 0 ||
+    (allowedDismissReviewIds?.length ?? 0) > 0;
+  if (!hasAllowedMutations && blockedErrors.length > 0) {
+    return {
+      repliedThreads: [],
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: blockedErrors,
+      instructions: [BLOCKED_REVIEW_INSTRUCTION],
+    };
+  }
+
   // Iterate capability-checks and routes its generated commands. Direct apply
-  // requests are user-directed: forward every supplied ID unchanged and let
+  // requests are user-directed: forward every remaining supplied ID unchanged and let
   // GitHub report whether each requested mutation is permitted or applicable.
   // Only generated durable-state commands carry `--adopt-existing-replies`.
   const result = await applyResolveOptions(
@@ -57,14 +95,18 @@ export async function runResolveMutate(
     {
       resolveThreadIds: opts.resolveThreadIds,
       replyThreadIds: opts.replyThreadIds,
-      minimizeCommentIds: opts.minimizeCommentIds,
-      dismissReviewIds: opts.dismissReviewIds,
+      minimizeCommentIds: allowedMinimizeCommentIds,
+      dismissReviewIds: allowedDismissReviewIds,
       dismissMessage: opts.dismissMessage,
       requireSha: opts.requireSha,
       ...(opts.adoptExistingReplies && { adoptExistingReplies: true }),
     },
     ...(preflight ? [preflight] : []),
   );
+  if (blockedErrors.length > 0) {
+    result.errors.push(...blockedErrors);
+    result.instructions = [...(result.instructions ?? []), BLOCKED_REVIEW_INSTRUCTION];
+  }
   const adopted = new Set(adoptedReplyThreads(result));
   let adoptedTranscripts: Map<string, string> | undefined;
   if (adopted.size) {
@@ -91,6 +133,9 @@ export async function runResolveMutate(
         );
       }),
     );
+  }
+  if (result.resolvedThreads.length > 0) {
+    await pruneResolvedReviewThreads(stateKey, result.resolvedThreads);
   }
   return result;
 }

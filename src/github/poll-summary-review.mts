@@ -1,19 +1,13 @@
-import {
-  isConfiguredBotAuthor,
-  isHumanAuthor,
-  normalizeAuthorType,
-  normalizeBotUsernames,
-} from "../comments/authors.mts";
+import { normalizeBotUsernames } from "../comments/authors.mts";
 import { loadClassifyRules } from "../classify/loader.mts";
 import type { ClassifyAction } from "../classify/types.mts";
 import { loadConfig } from "../config/load.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
-import { classifyItem, mutationWasDenied, type SeenMarker } from "../state/seen-comments.mts";
+import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import { threadEndedByShepherd } from "../comments/marker.mts";
 import { threadTranscriptBodies } from "../threads/transcript.mts";
 import type { PollSummaryReview, PollSummaryRuleAutoResolve } from "../types.mts";
-import type { RawAuthor, RawSummaryPr } from "./poll-summary-raw.mts";
-import { canGenerateGithubMutation } from "./mutation-policy.mts";
+import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import {
   applySummaryRuleAutoResolve,
   type SummaryAutoResolve,
@@ -22,11 +16,7 @@ import {
 } from "./poll-summary-rule-auto-resolve.mts";
 import { countCommentWork, repeatingThreadIds } from "./poll-summary-review-parity.mts";
 import { ruleHides, summaryRuleAction } from "./poll-summary-rule-items.mts";
-
-const authorOf = (author: RawAuthor | null | undefined) => ({
-  login: author?.login ?? "",
-  authorType: normalizeAuthorType(author?.__typename, author?.login),
-});
+import { countActionableSummaryReviews } from "./poll-summary-review-helpers.mts";
 
 /**
  * Count the review work a compact row routes to the full check. With `autoResolveKey` and
@@ -59,7 +49,11 @@ export async function evaluatePollSummaryReview(
     if (!comment.isMinimized)
       actions.comments.set(comment.id, summaryRuleAction(rules, "pr-comment", comment));
   for (const review of raw.reviews.nodes)
-    if (review.state === "COMMENTED" && review.body.trim() !== "" && !review.isMinimized)
+    if (
+      (review.state === "COMMENTED" || review.state === "DISMISSED") &&
+      review.body.trim() !== "" &&
+      !review.isMinimized
+    )
       actions.summaries.set(review.id, summaryRuleAction(rules, "review-summary", review));
   const threadView = raw.reviewThreads.nodes.map((thread) => {
     const truncated = thread.comments.pageInfo.hasPreviousPage;
@@ -116,47 +110,29 @@ export async function evaluatePollSummaryReview(
     bots,
   );
 
-  const latestStateByAuthor = new Map(
-    (raw.latestReviews?.nodes ?? []).flatMap((review) =>
-      review.author ? [[review.author.login.toLowerCase(), review.state] as const] : [],
+  const blockedReviewIds = new Set(
+    threadView.flatMap(({ thread, root }) =>
+      thread.isResolved === false &&
+      !confirmed.has(thread.id) &&
+      root?.pullRequestReview?.id !== undefined
+        ? [root.pullRequestReview.id]
+        : [],
     ),
   );
-  for (const review of raw.reviews.nodes) {
-    if (review.state === "COMMENTED") {
-      const action = actions.summaries.get(review.id);
-      if (!action || ruleHides(action, "review-summary", confirmed.has(review.id))) continue;
-      if (unconfirmed.has(review.id) || classifyItem(review.id, review.body, seen) !== "unchanged")
-        actionable += 1;
-      continue;
-    }
-    // An approval is surfaced once, as work, when iterate.minimize-approvals is on.
-    if (review.state === "APPROVED") {
-      if (
-        config.iterate["minimize-approvals"] &&
-        !review.isMinimized &&
-        classifyItem(review.id, review.body, seen) !== "unchanged"
-      )
-        actionable += 1;
-      continue;
-    }
-    if (review.state !== "CHANGES_REQUESTED") continue;
-    const login = review.author?.login.toLowerCase();
-    if (login && latestStateByAuthor.get(login) === "APPROVED") continue;
-    if (
-      ruleHides(summaryRuleAction(rules, "changes-requested", review), "changes-requested", false)
-    )
-      continue;
-    const author = authorOf(review.author);
-    const isBot = !isHumanAuthor(author) || isConfiguredBotAuthor(author, bots);
-    // The full check counts a human changes-requested review whether or not it was seen.
-    if (
-      !isBot ||
-      (canGenerateGithubMutation(viewerCanAdminister, "dismiss") &&
-        !mutationWasDenied(review.id, review.body, seen)) ||
-      classifyItem(review.id, review.body, seen) !== "unchanged"
-    )
-      actionable += 1;
-  }
+  actionable += countActionableSummaryReviews({
+    raw,
+    summaryActions: actions.summaries,
+    rules,
+    confirmed,
+    unconfirmed,
+    blockedReviewIds,
+    seen,
+    viewerCanAdminister,
+    minimizeApprovals: config.iterate["minimize-approvals"],
+    minimizeSupersededApprovals: config.iterate["minimize-superseded-approvals"],
+    minimizeComments: config.iterate["minimize-comments"],
+    bots,
+  });
 
   const repeating = repeatingThreadIds(
     threadView,

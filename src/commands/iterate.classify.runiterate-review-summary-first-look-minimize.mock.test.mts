@@ -48,7 +48,7 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     expect(result.triage.reviewSummaryIds).toEqual([]);
     expect(result.triage.resolveCommand.hasMutations).toBe(false);
   });
-  it("surfaces a first-look bot summary body under triage and includes it in the resolve command", async () => {
+  it("surfaces a first-look bot summary body under triage and includes it in the separate dismissReviewsCommand", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -63,17 +63,11 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     if (result.action !== "triage") return;
     expect(result.triage.firstLookSummaries).toEqual([botSummary]);
     expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.triage.resolveCommand.argv).toContain("--minimize-comment-ids");
-    expect(result.triage.resolveCommand.argv).toContain("PRR_BOT");
+    expect(result.triage.resolveCommand.hasMutations).toBe(false);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
   });
-  it("falls back to the agent-facing resolve command when self-minimize does not confirm success", async () => {
-    // autoMinimizeComments reports per-ID failures via `errors`/`minimized` rather
-    // than throwing (rate limit, null response, etc.) — an unconfirmed ID must not
-    // silently vanish; it needs a working fallback path (issue #313 review comment).
-    mockAutoMinimizeComments.mockResolvedValueOnce({
-      minimized: [],
-      errors: ["PRR_BOT: minimize returned null or comment not minimized"],
-    });
+  it("routes seen bot summaries to the agent-facing dismissReviewsCommand instead of auto-minimizing", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -83,11 +77,11 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("triage");
     if (result.action !== "triage") return;
     expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.triage.resolveCommand.argv).toContain("PRR_BOT");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
   });
 
   it("leaves seen summaries to the agent-facing command in a read-only scope", async () => {

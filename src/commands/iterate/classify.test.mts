@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildResolveCommand } from "./classify.mts";
+import { buildResolveCommand, classifyReviewSummaries } from "./classify.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { addPrShepherdMarker } from "../../comments/marker.mts";
-import type { AgentThread, ReviewThread } from "../../types.mts";
+import type { AgentThread, Review, ReviewThread } from "../../types.mts";
 
 const FORK_PR = "https://github.com/fork/widgets/pull/42";
 
@@ -129,5 +129,46 @@ describe("buildResolveCommand — existing-reply adoption", () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     const { resolveCommand } = buildResolveCommand([], [], ["PRRC_one"], [], [], FORK_PR);
     expect(resolveCommand.argv).not.toContain("--adopt-existing-replies");
+  });
+});
+
+describe("classifyReviewSummaries — unresolved thread gating and approval tie-breaks", () => {
+  const approval = (id: string, createdAtUnix: number): Review => ({
+    id,
+    author: "coderabbitai",
+    authorType: "Bot",
+    body: "LGTM",
+    createdAtUnix,
+    viewerCanMinimize: true,
+  });
+
+  it("holds back rule-auto-resolved review summaries that still have unresolved inline threads", () => {
+    const { minimizeIds } = classifyReviewSummaries(
+      { firstLook: [], seen: [], edited: [] },
+      [],
+      false,
+      "all",
+      new Set(["coderabbitai"]),
+      [{ reviewId: "PRR_RULE_BLOCKED" }],
+      ["PRR_RULE_BLOCKED", "PRR_RULE_CLEAR"],
+    );
+    expect(minimizeIds).toEqual(["PRR_RULE_CLEAR"]);
+  });
+
+  it("keeps the visible approval when tied at the same timestamp with a precomputed superseded approval", () => {
+    const visible = approval("PRR_VISIBLE", 100);
+    const precomputed = approval("PRR_PRECOMP", 100);
+    const { minimizeIds, surfacedApprovals } = classifyReviewSummaries(
+      { firstLook: [], seen: [], edited: [] },
+      [visible],
+      false,
+      "all",
+      new Set(["coderabbitai"]),
+      [],
+      [],
+      { minimizeSupersededApprovals: true, supersededApprovals: [precomputed] },
+    );
+    expect(minimizeIds).toEqual(["PRR_PRECOMP"]);
+    expect(surfacedApprovals.map((r) => r.id)).toEqual(["PRR_VISIBLE"]);
   });
 });

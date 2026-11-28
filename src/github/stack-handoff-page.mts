@@ -278,6 +278,8 @@ export function batchResponseFromSummary(
       pageInfo: firstPage,
       nodes: reviewsIn(layer, "CHANGES_REQUESTED").map((review) => ({
         id: review.id,
+        isMinimized: review.isMinimized === true,
+        viewerCanMinimize: review.viewerCanMinimize === true,
         authorAssociation: review.authorAssociation as never,
         author: review.author,
         body: review.body,
@@ -287,7 +289,9 @@ export function batchResponseFromSummary(
     },
     reviewSummaries: {
       pageInfo: firstPage,
-      nodes: reviewsIn(layer, "COMMENTED").map(reviewSummary),
+      nodes: layer.reviews.nodes
+        .filter((review) => review.state === "COMMENTED" || review.state === "DISMISSED")
+        .map((review) => ({ ...reviewSummary(review), state: review.state })),
     },
     allReviews: {
       totalCount: layer.reviews.totalCount,

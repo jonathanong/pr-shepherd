@@ -65,6 +65,7 @@ export interface EscalateDetails {
   pendingReviewCommands?: {
     resolveOnlyCommand?: ResolveCommand;
     resolveCommand?: ResolveCommand;
+    dismissReviewsCommand?: ResolveCommand;
   };
   suggestion: string;
   humanMessage: string;

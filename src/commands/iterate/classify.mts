@@ -10,6 +10,10 @@ import type {
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { shouldMinimizeAuthor } from "../../comments/minimize-policy.mts";
 import {
+  findSupersededApprovalIds,
+  reviewOrderingEntriesFromReviews,
+} from "../../comments/superseded-approvals.mts";
+import {
   isConfiguredBotAuthor,
   isHumanAuthor,
   type NormalizedBotUsernames,
@@ -30,6 +34,13 @@ function dedupeIds(ids: string[]): string[] {
   return out;
 }
 
+export interface ClassifyReviewSummaryOptions {
+  minimizeSupersededApprovals?: boolean;
+  supersededApprovals?: Review[];
+  changesRequestedReviews?: Review[];
+  latestReviews?: Array<{ login: string; state: string }>;
+}
+
 export function classifyReviewSummaries(
   summaries: { firstLook: Review[]; seen: Review[]; edited: Review[] },
   approvals: Review[],
@@ -38,9 +49,9 @@ export function classifyReviewSummaries(
   botUsernames: NormalizedBotUsernames = new Set(),
   unresolvedThreads: ReadonlyArray<Pick<ReviewThread, "reviewId">> = [],
   ruleAutoResolveIds: string[] = [],
+  options: ClassifyReviewSummaryOptions = {},
 ): {
   minimizeIds: string[];
-  selfMinimizeIds: string[];
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
@@ -52,33 +63,48 @@ export function classifyReviewSummaries(
     canGenerateGithubMutation(r.viewerCanMinimize, "minimize") &&
     shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames) &&
     !blockedReviewIds.has(r.id);
-  // First-look summaries still need one tick to surface their body to the agent,
-  // so their minimize IDs ride in the agent-facing apply command. Seen summaries
-  // (already surfaced in a prior tick) have no new content to show — the CLI
-  // self-minimizes them in-process (selfMinimizeIds) instead of routing a
-  // cosmetic-only mutation through triage (issue #313). Edited summaries are
-  // excluded entirely: they are already minimized server-side (body changed after
-  // minimize was applied).
-  const minimizeIds = summaries.firstLook.filter(eligible).map((r) => r.id);
-  const selfMinimizeIds = summaries.seen.filter(eligible).map((r) => r.id);
+  // Both first-look and already-seen summaries stay in the agent-facing review
+  // command once all of their inline threads are resolved — never hidden
+  // automatically in-process. Edited summaries are excluded: they are already
+  // minimized server-side (body changed after minimize was applied).
+  const minimizeIds = dedupeIds(
+    [...summaries.firstLook, ...summaries.seen].filter(eligible).map((r) => r.id),
+  );
   // Rule-matched summaries are already suppressed from agent output; bypass normal
-  // policy gates. Keep the two sets disjoint.
+  // policy gates, while still waiting for any unresolved inline threads.
   for (const id of ruleAutoResolveIds) {
-    if (!minimizeIds.includes(id) && !selfMinimizeIds.includes(id)) minimizeIds.push(id);
+    if (!blockedReviewIds.has(id) && !minimizeIds.includes(id)) minimizeIds.push(id);
   }
-  if (minimizeApprovals) {
-    const surfacedApprovals: Review[] = [];
-    for (const r of approvals) {
-      if (
-        canGenerateGithubMutation(r.viewerCanMinimize, "minimize") &&
-        shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames)
-      )
-        minimizeIds.push(r.id);
-      else surfacedApprovals.push(r);
+  const minimizeSupersededApprovals = options.minimizeSupersededApprovals ?? true;
+  const candidateApprovalsById = new Map<string, Review>();
+  for (const r of options.supersededApprovals ?? []) candidateApprovalsById.set(r.id, r);
+  for (const r of approvals) {
+    if (!candidateApprovalsById.has(r.id)) candidateApprovalsById.set(r.id, r);
+  }
+  const candidateApprovals = [...candidateApprovalsById.values()];
+  if (minimizeApprovals || minimizeSupersededApprovals) {
+    const precomputed = new Set((options.supersededApprovals ?? []).map((r) => r.id));
+    const supersededIds = minimizeApprovals
+      ? new Set(candidateApprovals.map((r) => r.id))
+      : findSupersededApprovalIds({
+          reviews: reviewOrderingEntriesFromReviews({
+            approvedReviews: candidateApprovals,
+            changesRequestedReviews: options.changesRequestedReviews ?? [],
+            reviewSummaries: [...summaries.firstLook, ...summaries.seen, ...summaries.edited],
+          }),
+          latestReviews: options.latestReviews,
+          precomputedSupersededIds: precomputed,
+        });
+    const minimizedApprovalIds = new Set<string>();
+    for (const r of candidateApprovals) {
+      if (supersededIds.has(r.id) && eligible(r)) {
+        if (!minimizeIds.includes(r.id)) minimizeIds.push(r.id);
+        minimizedApprovalIds.add(r.id);
+      }
     }
+    const surfacedApprovals = approvals.filter((r) => !minimizedApprovalIds.has(r.id));
     return {
       minimizeIds,
-      selfMinimizeIds,
       firstLookSummaries: summaries.firstLook,
       editedSummaries: summaries.edited,
       surfacedApprovals,
@@ -86,7 +112,6 @@ export function classifyReviewSummaries(
   }
   return {
     minimizeIds,
-    selfMinimizeIds,
     firstLookSummaries: summaries.firstLook,
     editedSummaries: summaries.edited,
     surfacedApprovals: approvals,
@@ -102,6 +127,12 @@ function pushAdoptExistingReplies(argv: string[], hasReply: boolean): void {
   if (hasReply && durableStateRequested()) argv.push("--adopt-existing-replies");
 }
 
+export interface BuildResolveReviewOptions {
+  reviewMinimizeIds?: string[];
+  blockedReviewIds?: ReadonlySet<string>;
+  minimizeComments?: MinimizeCommentsPolicy;
+}
+
 export function buildResolveCommand(
   threads: AgentThread[],
   resolutionOnlyThreads: ReviewThread[],
@@ -114,7 +145,12 @@ export function buildResolveCommand(
   viewerAuthorization?: ViewerAuthorization,
   authorizationThreads: ReviewThread[] = [],
   resolveOtherHumanThreads: ResolveOtherHumanThreads = "none",
-): { resolveCommand: ResolveCommand; resolveOnlyCommand?: ResolveCommand } {
+  reviewOptions: BuildResolveReviewOptions = {},
+): {
+  resolveCommand: ResolveCommand;
+  resolveOnlyCommand?: ResolveCommand;
+  dismissReviewsCommand?: ResolveCommand;
+} {
   const allThreads = [...threads, ...resolutionOnlyThreads];
   const routed = buildThreadMutationRouting(
     allThreads,
@@ -149,52 +185,82 @@ export function buildResolveCommand(
     canResolve.has(id),
   );
   const resolveThreadIds = dedupeIds([...pairedResolveThreadIds, ...standaloneResolveThreadIds]);
-  // Bot/non-human CHANGES_REQUESTED reviews are auto-dismissed after the agent pushes a fix.
-  // Human reviews are left for the reviewer to re-review or dismiss themselves.
-  const dismissReviewIds = dedupeIds(
-    canGenerateGithubMutation(viewerAuthorization?.viewerCanAdminister, "dismiss")
-      ? reviews
-          .filter((r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames))
-          .map((r) => r.id)
-      : [],
-  );
+  // Bot/non-human CHANGES_REQUESTED reviews are dismissed and minimized in a separate command
+  // only once all of their inline threads are resolved. Human reviews are left for the reviewer.
+  const blockedReviewIds = new Set<string>(reviewOptions.blockedReviewIds);
+  for (const thread of allThreads) {
+    if (thread.reviewId !== undefined) blockedReviewIds.add(thread.reviewId);
+  }
+  const dismissibleReviews = canGenerateGithubMutation(
+    viewerAuthorization?.viewerCanAdminister,
+    "dismiss",
+  )
+    ? reviews.filter(
+        (r) =>
+          (!isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames)) &&
+          !blockedReviewIds.has(r.id),
+      )
+    : [];
+  const dismissReviewIds = dedupeIds(dismissibleReviews.map((r) => r.id));
+  const minimizePolicy = reviewOptions.minimizeComments ?? "all";
+  const dismissMinimizeIds = dismissibleReviews
+    .filter(
+      (r) =>
+        r.isMinimized !== true &&
+        canGenerateGithubMutation(r.viewerCanMinimize, "minimize") &&
+        shouldMinimizeAuthor(r.authorType, minimizePolicy, r.author, botUsernames),
+    )
+    .map((r) => r.id);
+  const reviewMinimizeIds = dedupeIds([
+    ...dismissMinimizeIds,
+    ...(reviewOptions.reviewMinimizeIds ?? []),
+  ]);
+  const hasDismiss = dismissReviewIds.length > 0;
+  const hasReviewMinimize = reviewMinimizeIds.length > 0;
+  let dismissReviewsCommand: ResolveCommand | undefined;
+  if (hasDismiss || hasReviewMinimize) {
+    const reviewArgv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
+    if (hasReviewMinimize) {
+      reviewArgv.push("--minimize-comment-ids", reviewMinimizeIds.join(","));
+    }
+    if (hasDismiss) {
+      reviewArgv.push("--dismiss-review-ids", dismissReviewIds.join(","));
+      reviewArgv.push("--message", "$CHANGE_MESSAGE");
+    }
+    dismissReviewsCommand = {
+      argv: reviewArgv,
+      requiresHeadSha: hasDismiss,
+      requiresDismissMessage: hasDismiss,
+      ...(hasDismiss ? { dismissReviewIds } : undefined),
+      hasMutations: true,
+    };
+  }
 
   const hasReply = replyThreadIds.length > 0;
-  const hasDismiss = dismissReviewIds.length > 0;
-  // Mutations that require --message: replies (to human threads) and dismissals (of bot CR reviews).
-  const hasMessageMutations = hasReply || hasDismiss;
   const hasResolveOrMinimize = resolveThreadIds.length > 0 || allCommentIds.length > 0;
   const hasStandaloneResolveOrMinimize =
     standaloneResolveThreadIds.length > 0 || allCommentIds.length > 0;
 
-  if (hasMessageMutations && hasStandaloneResolveOrMinimize) {
-    // Split: message-bearing mutations plus their paired viewer-authored resolves ride in
-    // resolveArgv; standalone resolve/minimize mutations go in resolveOnlyArgv so they can
-    // run without SHA or message.
+  if (hasReply && hasStandaloneResolveOrMinimize) {
+    // Split: reply mutations plus their paired viewer-authored resolves ride in
+    // resolveArgv; standalone resolve/PR-comment minimize mutations go in resolveOnlyArgv so
+    // they can run without SHA or message.
     const resolveArgv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
-    if (replyThreadIds.length > 0) {
-      resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
-    }
+    resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
     if (pairedResolveThreadIds.length > 0) {
       resolveArgv.push("--resolve-thread-ids", pairedResolveThreadIds.join(","));
     }
     resolveArgv.push("--message", "$CHANGE_MESSAGE");
-    pushAdoptExistingReplies(resolveArgv, hasReply);
-    if (hasDismiss) {
-      resolveArgv.push("--dismiss-review-ids", dismissReviewIds.join(","));
-    }
-    // SHA is required when actionable thread fixes or failing checks are being addressed,
-    // or when bot CR reviews are being dismissed (post-push SHA gate).
-    const requiresHeadSha = threads.length > 0 || checks.length > 0 || hasDismiss;
+    pushAdoptExistingReplies(resolveArgv, true);
+    const requiresHeadSha = threads.length > 0 || checks.length > 0;
     const resolveCommand: ResolveCommand = {
       argv: resolveArgv,
       requiresHeadSha,
       requiresDismissMessage: true,
-      ...(replyThreadIds.length > 0 ? { replyThreadIds } : undefined),
+      replyThreadIds,
       ...(pairedResolveThreadIds.length > 0
         ? { resolveThreadIds: pairedResolveThreadIds }
         : undefined),
-      ...(hasDismiss ? { dismissReviewIds } : undefined),
       hasMutations: true,
     };
 
@@ -215,12 +281,16 @@ export function buildResolveCommand(
       hasMutations: true,
     };
 
-    return { resolveCommand, resolveOnlyCommand };
+    return {
+      resolveCommand,
+      resolveOnlyCommand,
+      ...(dismissReviewsCommand ? { dismissReviewsCommand } : undefined),
+    };
   }
 
-  // Single command: all mutations combined (or only one category present).
+  // Single command for inline threads and PR comments (or empty when only review mutations exist).
   const argv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
-  if (replyThreadIds.length > 0) {
+  if (hasReply) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$CHANGE_MESSAGE");
     pushAdoptExistingReplies(argv, true);
@@ -231,24 +301,19 @@ export function buildResolveCommand(
   if (allCommentIds.length > 0) {
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
   }
-  if (hasDismiss) {
-    // Add --message when dismissing without a reply (replies already added it above).
-    if (!hasReply) argv.push("--message", "$CHANGE_MESSAGE");
-    argv.push("--dismiss-review-ids", dismissReviewIds.join(","));
-  }
-  const hasMutations = hasMessageMutations || hasResolveOrMinimize;
-  // SHA is required when replying after actionable fixes/checks, or whenever dismissing
-  // (dismissal is a post-push operation that must race-check against a moving HEAD).
-  const requiresHeadSha = hasDismiss || (hasReply && (threads.length > 0 || checks.length > 0));
+  const hasMutations = hasReply || hasResolveOrMinimize;
+  const requiresHeadSha = hasReply && (threads.length > 0 || checks.length > 0);
   const resolveCommand: ResolveCommand = {
     argv,
     requiresHeadSha,
-    requiresDismissMessage: hasMessageMutations,
-    ...(replyThreadIds.length > 0 ? { replyThreadIds } : undefined),
+    requiresDismissMessage: hasReply,
+    ...(hasReply ? { replyThreadIds } : undefined),
     ...(resolveThreadIds.length > 0 ? { resolveThreadIds } : undefined),
-    ...(hasDismiss ? { dismissReviewIds } : undefined),
     hasMutations,
   };
 
-  return { resolveCommand };
+  return {
+    resolveCommand,
+    ...(dismissReviewsCommand ? { dismissReviewsCommand } : undefined),
+  };
 }

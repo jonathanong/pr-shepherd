@@ -2,7 +2,13 @@ import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./clien
 import { mapPool } from "../util/pool.mts";
 import { chunksOf } from "../util/chunks.mts";
 import { BATCH_PR_VIEWER_QUERY } from "./queries.mts";
-import type { RawComment, RawPr, RawReviewSummary, RawThread } from "./batch-raw-types.mts";
+import type {
+  RawComment,
+  RawPr,
+  RawReview,
+  RawReviewSummary,
+  RawThread,
+} from "./batch-raw-types.mts";
 
 const NODES_PER_REQUEST = 100; // GraphQL `nodes(ids:)` limit
 const CONCURRENCY = 4;
@@ -29,7 +35,7 @@ interface ViewerResponse {
 export interface ViewerTargets {
   threads: RawThread[];
   comments: RawComment[];
-  reviews: RawReviewSummary[];
+  reviews: Array<RawReview | RawReviewSummary>;
 }
 
 export interface BatchViewer {

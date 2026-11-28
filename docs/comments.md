@@ -6,12 +6,12 @@ Which review threads, PR comments, and reviews Shepherd surfaces, how the seen-m
 
 ## Review threads vs PR comments
 
-| Type           | Description                                                        | GraphQL field                            | Report field      |
-| -------------- | ------------------------------------------------------------------ | ---------------------------------------- | ----------------- |
-| Review thread  | Inline code comment on a file and line                             | `pullRequest.reviewThreads`              | `threads`         |
-| PR comment     | Top-level comment, not attached to a file                          | `pullRequest.comments`                   | `comments`        |
-| Review summary | PR-level body of a `COMMENTED` review (for example a bot overview) | `pullRequest.reviews(states: COMMENTED)` | `reviewSummaries` |
-| Approval       | `APPROVED` review                                                  | `pullRequest.reviews(states: APPROVED)`  | `approvedReviews` |
+| Type           | Description                                                                       | GraphQL field                                         | Report field      |
+| -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------- |
+| Review thread  | Inline code comment on a file and line                                            | `pullRequest.reviewThreads`                           | `threads`         |
+| PR comment     | Top-level comment, not attached to a file                                         | `pullRequest.comments`                                | `comments`        |
+| Review summary | PR-level body of a `COMMENTED` or `DISMISSED` review (for example a bot overview) | `pullRequest.reviews(states: [COMMENTED, DISMISSED])` | `reviewSummaries` |
+| Approval       | `APPROVED` review                                                                 | `pullRequest.reviews(states: APPROVED)`               | `approvedReviews` |
 
 A review thread carries its root comment fields (`body`, `author`, `url`, and `reviewId` when GitHub exposes the parent review) plus a `comments[]` transcript of every fetched comment and reply. Text output renders the full transcript, not previews, so the agent does not need a second GitHub fetch.
 
@@ -22,7 +22,7 @@ A review thread carries its root comment fields (`body`, `author`, `url`, and `r
 - the item's `authorType` matches [`iterate.minimize-comments`](configuration.md#iterateminimize-comments--default-bots) (top-level [`bot-usernames`](configuration.md#bot-usernames) extends which authors count as bots, for minimization as well as thread visibility and resolve routing);
 - for a review summary, no known inline child thread from the same review is still unresolved.
 
-Human-authored items are never minimized. [`iterate.minimize-approvals`](configuration.md#iterateminimize-approvals--default-false) adds `APPROVED` reviews to minimization (default off); it does not affect whether `approvedReviews` is reported.
+Human-authored items are never minimized. [`iterate.minimize-superseded-approvals`](configuration.md#iterateminimize-superseded-approvals--default-true) minimizes earlier eligible `APPROVED` reviews from the same author once a newer substantive review supersedes them (default on; opt out with `false`). [`iterate.minimize-approvals`](configuration.md#iterateminimize-approvals--default-false) minimizes all eligible `APPROVED` reviews including the latest (default off). Neither setting affects whether `approvedReviews` is reported.
 
 ### Classification auto-resolve
 
@@ -91,13 +91,13 @@ flowchart TD
   E --> U[Update bodyHash, keep seenAt]
 ```
 
-| Aspect         | Behavior                                                                                                                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Marker path    | `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json`, one file per item                                                                                                              |
-| Hash input     | The body. For a review thread, the full transcript, so a reply to a seen resolved, minimized, or outdated thread re-surfaces it as edited with links to the thread comments                 |
-| Covered items  | Review threads, visible PR comments, and every review object Shepherd surfaces (`COMMENTED` summaries, `CHANGES_REQUESTED` reviews, `APPROVED` reviews)                                     |
-| Review markers | When GitHub links an inline thread to a parent review, the review's marker records sorted `inlineThreadIds`, so summary minimization can wait for known children without per-review lookups |
-| Implementation | `src/state/seen-comments.mts`                                                                                                                                                               |
+| Aspect         | Behavior                                                                                                                                                                                                                                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Marker path    | `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json`, one file per item                                                                                                                                                                                                                                                                                       |
+| Hash input     | The body. For a review thread, the full transcript, so a reply to a seen resolved, minimized, or outdated thread re-surfaces it as edited with links to the thread comments                                                                                                                                                                                          |
+| Covered items  | Review threads, visible PR comments, and every review object Shepherd surfaces (`COMMENTED` summaries, `CHANGES_REQUESTED` reviews, `APPROVED` reviews)                                                                                                                                                                                                              |
+| Review markers | When GitHub links an inline thread to a parent review, the review's marker records sorted `inlineThreadIds` and `unresolvedInlineThreadIds` (updated on each check and pruned whenever `apply review` resolves threads), so summary minimization and the `apply review` unresolved-thread guard avoid extra GraphQL calls when all inline items are already resolved |
+| Implementation | `src/state/seen-comments.mts`                                                                                                                                                                                                                                                                                                                                        |
 
 In `iterate triage` output, first-look items appear as a `## First-look items` section in text and as `firstLookThreads` / `firstLookComments` in JSON. An initial first look at a hidden PR comment is acknowledgement-only. If a minimized notice is later edited into text that no longer matches a noise rule, Shepherd surfaces the edited body. A non-bot edit also restarts the [ready delay](iterate-flow.md#2-ready-delay) and clears a READY receipt; a bot edit is acknowledgement-only. Displaying the item writes its seen marker, so it reappears only after another body change. The GitHub comment stays minimized.
 
@@ -122,7 +122,7 @@ Built in `comments/resolve.mts`:
 | Minimize comment | `minimizeComment`                 | `--minimize-comment-ids` | Hides a PR comment or review summary (`PullRequestReview` implements `Minimizable`) |
 | Dismiss review   | `dismissPullRequestReview`        | `--dismiss-review-ids`   | Dismisses a `CHANGES_REQUESTED` review with a message                               |
 
-Review summary IDs (`PRR_…` from `reviewSummaries`) go through `--minimize-comment-ids`; `--dismiss-review-ids` is only for `CHANGES_REQUESTED` reviews.
+Review summary IDs (`PRR_…` from `reviewSummaries`), eligible `APPROVED` review IDs, and dismissed `CHANGES_REQUESTED` review IDs go through `--minimize-comment-ids` in the separate `dismissReviewsCommand` once all of their inline threads are resolved; `--dismiss-review-ids` is only for `CHANGES_REQUESTED` reviews (which receive both `--dismiss-review-ids` and `--minimize-comment-ids` when minimizable). `apply review` also checks GitHub before mutating and refuses to dismiss or minimize any review that still has unresolved inline threads (exiting `69`), even if those threads are passed to `--resolve-thread-ids` in the same call.
 
 Operations are sent in batches of 10. On a primary or secondary rate-limit response Shepherd stops instead of continuing through later IDs. The result keeps the successful arrays (`resolvedThreads`, `minimizedComments`, `dismissedReviews`), adds pending arrays for IDs that need another run (`unresolvedThreads`, `unminimizedComments`, `undismissedReviews`), and includes `rateLimit` metadata when GitHub supplied retry or reset details.
 

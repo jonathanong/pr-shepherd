@@ -254,7 +254,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       })),
     },
     changesRequestedReviews: report.changesRequestedReviews.map((review) => ({
-      viewerCanMinimize: false,
+      viewerCanMinimize: true,
       ...review,
     })),
     reviewSummaries: report.reviewSummaries.map((review) => ({

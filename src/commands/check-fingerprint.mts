@@ -26,6 +26,7 @@ export function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
     report.comments.firstLook.length === 0 &&
     report.changesRequestedReviews.length === 0 &&
     report.approvedReviews.length === 0 &&
+    (report.supersededApprovedReviews?.length ?? 0) === 0 &&
     report.firstLookSummaries.length === 0 &&
     report.editedSummaries.length === 0 &&
     (report.ruleAutoResolveReviewSummaryIds?.length ?? 0) === 0 &&

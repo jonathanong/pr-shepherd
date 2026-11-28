@@ -175,10 +175,12 @@ interface TriageDetails {
   /** Checks still unstarted after the CI-start stall timeout, on the one investigation tick. Omitted otherwise. */
   stalledChecks?: AgentStalledCheck[];
   changesRequestedReviews: Review[];
-  /** Pre-built apply command. Run after committing and pushing. */
+  /** Pre-built apply command for inline thread replies/resolves and PR-level comments. Run after committing and pushing. */
   resolveCommand: ResolveCommand;
-  /** When present, run this command first (no SHA substitution needed) for standalone thread resolves and comment minimization, independent of any push. */
+  /** When present, run this command first (no SHA substitution needed) for standalone thread resolves and PR-comment minimization, independent of any push. */
   resolveOnlyCommand?: ResolveCommand;
+  /** Separate command to dismiss and/or hide reviews (`CHANGES_REQUESTED`, `COMMENTED`/`DISMISSED`, and eligible `APPROVED` reviews) whose inline items are all resolved. */
+  dismissReviewsCommand?: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
   /** Requeue command emitted after merge-group remediation. */

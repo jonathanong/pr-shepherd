@@ -204,14 +204,16 @@ export function renderReviewBullet(
     headOid?: string;
     commitsSince?: number;
   },
-  opts: { includeBody?: boolean } = {},
+  opts: { includeBody?: boolean; pendingInlineThreads?: boolean } = {},
 ): string {
   const base = `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${renderReviewCommitTag(r)}`;
   const staleTag = r.staleReview
     ? " [stale — review is on an old commit, all threads resolved]"
     : "";
   if (r.staleBotCr)
-    return `${base}${staleTag} [pending dismissal — already surfaced; include in \`--dismiss-review-ids\`]`;
+    return opts.pendingInlineThreads
+      ? `${base}${staleTag} [pending inline threads — already surfaced; dismiss once all inline threads are resolved]`
+      : `${base}${staleTag} [pending dismissal — already surfaced; include in \`--dismiss-review-ids\`]`;
   const humanStaleTag = r.staleReview
     ? " [stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]"
     : "";

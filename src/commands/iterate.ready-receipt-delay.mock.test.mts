@@ -26,8 +26,6 @@ import {
   mockWriteReadyReceipt,
   makeOpts,
   makeReport,
-  makeReview,
-  mockAutoMinimizeComments,
   mockRunCheck,
   mockClearReadyDelay,
   mockUpdateReadyDelay,
@@ -119,13 +117,11 @@ describe("runIterate — current stack READY receipt", () => {
         headRefOid: "head-1",
         baseRefOid: "base-1",
       } as RawSummaryPr);
-      return stackReport({
-        reviewSummaries: [makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview")],
-      });
+      context?.invalidateReceiptSummary();
+      return stackReport();
     });
 
     expect((await runIterate(makeOpts())).action).toBe("cancel");
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
     expect(mockFetchRawSummaryPr).toHaveBeenCalledTimes(1);
   });
 

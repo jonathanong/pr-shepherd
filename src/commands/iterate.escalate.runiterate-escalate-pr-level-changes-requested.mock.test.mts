@@ -59,10 +59,12 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
     expect(result.action).toBe("triage");
     if (result.action === "triage") {
       expect(result.triage.changesRequestedReviews).toHaveLength(1);
-      // Non-human CR reviews are auto-dismissed after the agent pushes a fix.
-      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.triage.resolveCommand.argv).toContain("review-1");
-      expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
+      // Non-human CR reviews are dismissed and minimized in the separate review command.
+      expect(result.triage.resolveCommand.hasMutations).toBe(false);
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("review-1");
+      expect(result.triage.dismissReviewsCommand?.requiresDismissMessage).toBe(true);
     }
   });
 
@@ -96,9 +98,9 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
       expect(result.triage.resolveCommand.argv).toContain("--reply-thread-ids");
       expect(result.triage.resolveCommand.argv).toContain("thread-resolution-only");
       expect(result.triage.resolveCommand.resolveThreadIds).toBeUndefined();
-      // The authorized non-human CR dismissal remains actionable on its own.
-      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.triage.resolveCommand.argv).toContain("review-1");
+      // The authorized non-human CR dismissal remains actionable in the separate review command.
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.dismissReviewsCommand?.argv).toContain("review-1");
     }
   });
 });

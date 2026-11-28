@@ -18,8 +18,11 @@ describe("runCheck — review inline-thread markers", () => {
 
     await runCheck(BASE_OPTS);
 
-    expect(mockMarkReviewInlineThreads).toHaveBeenCalledWith(expect.any(Object), "PRR_PARENT", [
-      "t-child",
-    ]);
+    expect(mockMarkReviewInlineThreads).toHaveBeenCalledWith(
+      expect.any(Object),
+      "PRR_PARENT",
+      ["t-child"],
+      ["t-child"],
+    );
   });
 });

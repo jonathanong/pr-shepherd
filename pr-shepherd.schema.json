@@ -123,6 +123,10 @@
           "default": false,
           "type": "boolean"
         },
+        "minimize-superseded-approvals": {
+          "default": true,
+          "type": "boolean"
+        },
         "minimize-comments": {
           "default": "bots",
           "type": "string",

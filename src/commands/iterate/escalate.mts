@@ -232,13 +232,20 @@ export function buildEscalateHumanMessage(
   }
 
   const pending = escalate.pendingReviewCommands;
-  if (pending?.resolveOnlyCommand?.hasMutations || pending?.resolveCommand?.hasMutations) {
+  if (
+    pending?.resolveOnlyCommand?.hasMutations ||
+    pending?.resolveCommand?.hasMutations ||
+    pending?.dismissReviewsCommand?.hasMutations
+  ) {
     lines.push("", "## Pending review commands", "");
     if (pending.resolveOnlyCommand?.hasMutations) {
       lines.push(`- resolve-only: \`${renderResolveCommand(pending.resolveOnlyCommand)}\``);
     }
     if (pending.resolveCommand?.hasMutations) {
       lines.push(`- apply review: \`${renderResolveCommand(pending.resolveCommand)}\``);
+    }
+    if (pending.dismissReviewsCommand?.hasMutations) {
+      lines.push(`- dismiss reviews: \`${renderResolveCommand(pending.dismissReviewsCommand)}\``);
     }
   }
 

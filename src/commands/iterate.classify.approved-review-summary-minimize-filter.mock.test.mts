@@ -128,7 +128,7 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.triage.surfacedApprovals.map((review) => review.id)).toEqual(["PRR_AP_DENIED"]);
     expect(result.triage.resolveCommand.argv).not.toContain("--minimize-comment-ids");
   });
-  it("summary-only PR self-minimizes in-process and does not route to triage (issue #313)", async () => {
+  it("summary-only PR routes to triage with a separate dismissReviewsCommand instead of auto-minimizing", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -136,10 +136,13 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("wait");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
   });
-  it("self-minimizes a bot summary in-process and excludes it from reviewSummaryIds when a thread is also present", async () => {
+  it("puts a resolved bot summary in the separate dismissReviewsCommand when an unrelated thread is also present", async () => {
     const t1 = makeThread({
       id: "PRRT_x",
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
@@ -165,10 +168,13 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("triage");
     if (result.action !== "triage") return;
 
-    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.resolveCommand.argv).not.toContain("PRR_BOT");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("--minimize-comment-ids");
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_BOT");
   });
 });

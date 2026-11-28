@@ -226,15 +226,15 @@ function buildBulkMutation(
     );
   }
 
-  for (let i = 0; i < minimizeIds.length; i++) {
-    ops.push(
-      `  m${i}: minimizeComment(input: { subjectId: ${JSON.stringify(minimizeIds[i])}, classifier: RESOLVED }) { minimizedComment { isMinimized } }`,
-    );
-  }
-
   for (let i = 0; i < dismissIds.length; i++) {
     ops.push(
       `  d${i}: dismissPullRequestReview(input: { pullRequestReviewId: ${JSON.stringify(dismissIds[i])}, message: ${JSON.stringify(dismissMessage)} }) { pullRequestReview { state } }`,
+    );
+  }
+
+  for (let i = 0; i < minimizeIds.length; i++) {
+    ops.push(
+      `  m${i}: minimizeComment(input: { subjectId: ${JSON.stringify(minimizeIds[i])}, classifier: RESOLVED }) { minimizedComment { isMinimized } }`,
     );
   }
 
@@ -254,8 +254,8 @@ async function bulkApply(
   const allOps: ResolveMutationOp[] = [
     ...replyIds.map((id) => ({ kind: "p" as const, id })),
     ...resolveIds.map((id) => ({ kind: "r" as const, id })),
-    ...minimizeIds.map((id) => ({ kind: "m" as const, id })),
     ...dismissIds.map((id) => ({ kind: "d" as const, id })),
+    ...minimizeIds.map((id) => ({ kind: "m" as const, id })),
   ];
 
   for (let i = 0; i < allOps.length; i += BULK_CHUNK_SIZE) {

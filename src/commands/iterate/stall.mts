@@ -30,6 +30,9 @@ function pendingReviewCommandsFromResult(
     ...(result.triage.resolveCommand.hasMutations && {
       resolveCommand: result.triage.resolveCommand,
     }),
+    ...(result.triage.dismissReviewsCommand?.hasMutations && {
+      dismissReviewsCommand: result.triage.dismissReviewsCommand,
+    }),
   };
   return Object.keys(pending).length > 0 ? pending : undefined;
 }

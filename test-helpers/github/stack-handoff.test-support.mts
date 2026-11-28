@@ -499,6 +499,8 @@ export function batchPage(layer: LayerModel, model: LayerModel[]) {
           pageInfo: firstPage,
           nodes: reviews("CHANGES_REQUESTED").map((item) => ({
             id: item.id,
+            isMinimized: false,
+            viewerCanMinimize: true,
             authorAssociation: "MEMBER",
             author,
             body: item.body,
@@ -506,7 +508,12 @@ export function batchPage(layer: LayerModel, model: LayerModel[]) {
             commit: { oid: HEADS[layer.number] },
           })),
         },
-        reviewSummaries: { pageInfo: firstPage, nodes: reviews("COMMENTED").map(reviewNode) },
+        reviewSummaries: {
+          pageInfo: firstPage,
+          nodes: layer.reviews
+            .filter((item) => item.state === "COMMENTED" || item.state === "DISMISSED")
+            .map((item) => ({ ...reviewNode(item), state: item.state })),
+        },
         allReviews: {
           totalCount: layer.reviews.length,
           nodes: layer.reviews.map((item) => ({ id: item.id, updatedAt: item.updatedAt })),

@@ -103,7 +103,7 @@ async function fetchGraphqlPrBatch<T>(
     (await applyBatchViewer(repo, raw, {
       threads: threadPages.threads,
       comments: paged.comments,
-      reviews: [...paged.reviewSummaries, ...paged.approvedReviews],
+      reviews: [...paged.changesRequested, ...paged.reviewSummaries, ...paged.approvedReviews],
     }));
   // The topology's viewer login and administer bit come from this snapshot's viewer read.
   if (viewer) {

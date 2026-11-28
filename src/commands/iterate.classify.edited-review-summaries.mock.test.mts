@@ -17,10 +17,7 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
-  it("editedSummaries are surfaced in triage (triggered by the edit); the seen summary self-minimizes instead of joining the queue", async () => {
-    // The edited summary triggers triage on its own; the seen summary has no new
-    // content to surface, so the CLI self-minimizes it in-process (issue #313)
-    // rather than routing it through the agent-facing resolve command.
+  it("editedSummaries are surfaced in triage without minimizing them, while the seen summary rides in dismissReviewsCommand", async () => {
     const seenSummary = makeReview("PRR_SEEN", "copilot", "Old review.");
     const editedSummary = makeReview("PRR_ED", "copilot", "Updated.");
     mockRunCheck.mockResolvedValue(
@@ -34,12 +31,14 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_SEEN"]);
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("triage");
     if (result.action !== "triage") return;
 
     expect(result.triage.editedSummaries).toEqual([editedSummary]);
-    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_SEEN"]);
+    expect(result.triage.dismissReviewsCommand?.argv).toContain("PRR_SEEN");
+    expect(result.triage.dismissReviewsCommand?.argv).not.toContain("PRR_ED");
     expect(result.triage.instructions.join("\n")).toContain("edited since first look");
   });
   it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {
