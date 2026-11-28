@@ -1,7 +1,7 @@
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { githubOperation } from "./transport.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
-import { resolveRestIdentity } from "./rest-identities.mts";
+import { resolveGraphqlThreadId, resolveRestIdentity } from "./rest-identities.mts";
 import { chunksOf } from "../util/chunks.mts";
 
 const REVIEW_THREADS_QUERY = `query ReviewUnresolvedThreads($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
@@ -76,15 +76,29 @@ export async function checkThreadsStillUnresolved(
   await githubOperation(
     "ReviewThreadStates",
     async () => {
-      for (const batch of chunksOf(unique, 100)) {
+      const gqlToOriginal = new Map<string, string[]>();
+      for (const id of unique) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const gqlId = await resolveGraphqlThreadId(id);
+          const list = gqlToOriginal.get(gqlId) ?? [];
+          list.push(id);
+          gqlToOriginal.set(gqlId, list);
+        } catch {
+          unresolved.add(id);
+        }
+      }
+      for (const batch of chunksOf([...gqlToOriginal.keys()], 100)) {
         // eslint-disable-next-line no-await-in-loop
         const res: { data: ThreadStatesResponse } =
           await graphqlWithRateLimit<ThreadStatesResponse>(THREAD_STATES_QUERY, { ids: batch });
         const byId = new Map(
           res.data.nodes.flatMap((node) => (node?.id ? [[node.id, node.isResolved] as const] : [])),
         );
-        for (const id of batch) {
-          if (byId.get(id) !== true) unresolved.add(id);
+        for (const gqlId of batch) {
+          if (byId.get(gqlId) !== true) {
+            for (const origId of gqlToOriginal.get(gqlId)!) unresolved.add(origId);
+          }
         }
       }
     },
