@@ -56,11 +56,7 @@ interface ThreadStatesResponse {
 export function isReviewNodeId(id: string): boolean {
   if (id.startsWith("PRR_")) return true;
   if (id.length < 24 || !/^[A-Za-z0-9+/=]+$/.test(id)) return false;
-  try {
-    return Buffer.from(id, "base64").toString("utf8").includes("PullRequestReview");
-  } catch {
-    return false;
-  }
+  return Buffer.from(id, "base64").toString("utf8").includes("PullRequestReview");
 }
 
 /**
@@ -82,16 +78,12 @@ export async function checkThreadsStillUnresolved(
       for (const batch of chunksOf(unique, 100)) {
         // eslint-disable-next-line no-await-in-loop
         const res: { data: ThreadStatesResponse } =
-          await graphqlWithRateLimit<ThreadStatesResponse>(
-            THREAD_STATES_QUERY,
-            { ids: batch },
-            { allowPartialData: true },
-          );
+          await graphqlWithRateLimit<ThreadStatesResponse>(THREAD_STATES_QUERY, { ids: batch });
         const byId = new Map(
           res.data.nodes.flatMap((node) => (node?.id ? [[node.id, node.isResolved] as const] : [])),
         );
         for (const id of batch) {
-          if (byId.get(id) === false) unresolved.add(id);
+          if (byId.has(id) && byId.get(id) !== true) unresolved.add(id);
         }
       }
     },

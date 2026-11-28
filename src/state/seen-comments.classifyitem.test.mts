@@ -70,16 +70,21 @@ describe("classifyItem", () => {
 describe("pruneResolvedReviewThreads", () => {
   it("prunes resolved thread ids from review markers while preserving other fields", async () => {
     const key = { owner: "o", repo: "r", pr: 7 };
-    await markReviewInlineThreads(key, "PRR_1", ["PRRT_1", "PRRT_2"], ["PRRT_1", "PRRT_2"]);
-    await markReviewInlineThreads(key, "PRR_2", ["PRRT_3"], ["PRRT_3"]);
+    await markReviewInlineThreads(
+      key,
+      "PRR_1",
+      ["PRRT_3", "PRRT_1", "PRRT_2"],
+      ["PRRT_3", "PRRT_1", "PRRT_2"],
+    );
+    await markReviewInlineThreads(key, "PRR_2", ["PRRT_4"], ["PRRT_4"]);
 
     await pruneResolvedReviewThreads(key, ["PRRT_1"]);
     const afterFirst = await loadSeenMap(key);
-    expect(afterFirst.get("PRR_1")?.unresolvedInlineThreadIds).toEqual(["PRRT_2"]);
-    expect(afterFirst.get("PRR_1")?.inlineThreadIds).toEqual(["PRRT_1", "PRRT_2"]);
-    expect(afterFirst.get("PRR_2")?.unresolvedInlineThreadIds).toEqual(["PRRT_3"]);
+    expect(afterFirst.get("PRR_1")?.unresolvedInlineThreadIds).toEqual(["PRRT_2", "PRRT_3"]);
+    expect(afterFirst.get("PRR_1")?.inlineThreadIds).toEqual(["PRRT_1", "PRRT_2", "PRRT_3"]);
+    expect(afterFirst.get("PRR_2")?.unresolvedInlineThreadIds).toEqual(["PRRT_4"]);
 
-    await pruneResolvedReviewThreads(key, ["PRRT_2"]);
+    await pruneResolvedReviewThreads(key, ["PRRT_2", "PRRT_3"]);
     const afterSecond = await loadSeenMap(key);
     expect(afterSecond.get("PRR_1")?.unresolvedInlineThreadIds).toEqual([]);
   });

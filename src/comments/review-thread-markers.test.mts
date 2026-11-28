@@ -35,6 +35,7 @@ describe("markReviewInlineThreadMarkers", () => {
     await markReviewInlineThreadMarkers(
       stateKey,
       [
+        thread({ id: "thread-d", reviewId: "PRR_1", isResolved: false }),
         thread({ id: "thread-b", reviewId: "PRR_1", isResolved: true }),
         thread({ id: "thread-a", reviewId: "PRR_1", isResolved: false }),
         thread({ id: "thread-c", reviewId: "PRR_2", isResolved: undefined }),
@@ -47,8 +48,8 @@ describe("markReviewInlineThreadMarkers", () => {
     expect(mockMarkReviewInlineThreads).toHaveBeenCalledWith(
       stateKey,
       "PRR_1",
-      ["thread-a", "thread-b"],
-      ["thread-a"],
+      ["thread-a", "thread-b", "thread-d"],
+      ["thread-a", "thread-d"],
     );
     expect(mockMarkReviewInlineThreads).toHaveBeenCalledWith(
       stateKey,

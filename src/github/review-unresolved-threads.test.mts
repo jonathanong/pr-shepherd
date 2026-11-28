@@ -45,6 +45,9 @@ describe("checkThreadsStillUnresolved", () => {
     const still = await checkThreadsStillUnresolved(42, REPO, ["PRRT_1", "PRRT_2", "PRRT_GONE"]);
     expect([...still]).toEqual(["PRRT_1"]);
     expect(mockGraphql).toHaveBeenCalledTimes(1);
+    expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), {
+      ids: ["PRRT_1", "PRRT_2", "PRRT_GONE"],
+    });
   });
 
   it("keeps cached thread IDs unresolved under REST when thread resolution status is unavailable", async () => {
@@ -57,6 +60,21 @@ describe("checkThreadsStillUnresolved", () => {
       checkThreadsStillUnresolved(42, REPO, ["PRRT_1"]),
     );
     expect([...still]).toEqual(["PRRT_1"]);
+  });
+
+  it("returns only still-unresolved threads under CCR REST when status is available", async () => {
+    mockReadRestFeedback.mockResolvedValueOnce({
+      threads: [
+        { id: "rest:thread:1", reviewId: "PRR_1", isResolved: false },
+        { id: "rest:thread:2", reviewId: "PRR_1", isResolved: true },
+      ],
+      unavailable: [],
+    } as never);
+
+    const still = await runWithGithubTransport("rest", () =>
+      checkThreadsStillUnresolved(42, REPO, ["rest:thread:1", "rest:thread:2"]),
+    );
+    expect([...still]).toEqual(["rest:thread:1"]);
   });
 });
 
