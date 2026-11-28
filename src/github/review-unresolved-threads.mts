@@ -1,6 +1,7 @@
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { githubOperation } from "./transport.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
+import { resolveRestIdentity } from "./rest-identities.mts";
 import { chunksOf } from "../util/chunks.mts";
 
 const REVIEW_THREADS_QUERY = `query ReviewUnresolvedThreads($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
@@ -83,19 +84,26 @@ export async function checkThreadsStillUnresolved(
           res.data.nodes.flatMap((node) => (node?.id ? [[node.id, node.isResolved] as const] : [])),
         );
         for (const id of batch) {
-          if (byId.has(id) && byId.get(id) !== true) unresolved.add(id);
+          if (byId.get(id) !== true) unresolved.add(id);
         }
       }
     },
     async () => {
-      const wanted = new Set(unique);
       const feedback = await readRestFeedback(pr, repo);
-      if (feedback.unavailable?.some((item) => item.field === "reviewThreads.status")) {
-        for (const id of unique) unresolved.add(id);
-        return;
-      }
+      const resolvedIds = new Set<string>();
       for (const thread of feedback.threads) {
-        if (wanted.has(thread.id) && thread.isResolved !== true) unresolved.add(thread.id);
+        if (thread.isResolved !== true) continue;
+        resolvedIds.add(thread.id);
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const entry = await resolveRestIdentity(thread.id, "thread");
+          if (entry.graphqlThreadId) resolvedIds.add(entry.graphqlThreadId);
+        } catch {
+          // No recorded GraphQL alias for this REST thread; match by REST thread ID only.
+        }
+      }
+      for (const id of unique) {
+        if (!resolvedIds.has(id)) unresolved.add(id);
       }
     },
   );
@@ -144,10 +152,13 @@ export async function findUnresolvedThreadsByReviewId(
           record(reviewId, thread.id);
         }
         if (!connection.pageInfo.hasNextPage) break;
-        if (!connection.pageInfo.endCursor) {
-          throw new Error("Review thread pagination returned hasNextPage without endCursor");
+        const nextCursor = connection.pageInfo.endCursor;
+        if (!nextCursor || nextCursor === cursor) {
+          throw new Error(
+            "Review thread pagination returned hasNextPage without advancing endCursor",
+          );
         }
-        cursor = connection.pageInfo.endCursor;
+        cursor = nextCursor;
       }
     },
     async () => {

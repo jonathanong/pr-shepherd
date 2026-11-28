@@ -6,9 +6,13 @@ vi.mock("./client.mts", () => ({
 vi.mock("./rest-feedback-read.mts", () => ({
   readRestFeedback: vi.fn(),
 }));
+vi.mock("./rest-identities.mts", () => ({
+  resolveRestIdentity: vi.fn(),
+}));
 
 import { graphqlWithRateLimit } from "./client.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
+import { resolveRestIdentity } from "./rest-identities.mts";
 import { runWithGithubTransport } from "./transport.mts";
 import {
   checkThreadsStillUnresolved,
@@ -18,6 +22,7 @@ import {
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
 const mockReadRestFeedback = vi.mocked(readRestFeedback);
+const mockResolveRestIdentity = vi.mocked(resolveRestIdentity);
 const REPO = { owner: "owner", name: "repo" };
 
 beforeEach(() => {
@@ -35,24 +40,24 @@ describe("isReviewNodeId", () => {
 });
 
 describe("checkThreadsStillUnresolved", () => {
-  it("queries only the given thread node IDs and returns the still-unresolved subset", async () => {
+  it("queries only the given thread node IDs and treats non-confirmed threads as unresolved", async () => {
     mockGraphql.mockResolvedValueOnce({
       data: {
         nodes: [{ id: "PRRT_1", isResolved: false }, { id: "PRRT_2", isResolved: true }, null],
       },
     });
 
-    const still = await checkThreadsStillUnresolved(42, REPO, ["PRRT_1", "PRRT_2", "PRRT_GONE"]);
-    expect([...still]).toEqual(["PRRT_1"]);
+    const still = await checkThreadsStillUnresolved(42, REPO, ["PRRT_1", "PRRT_2", "PRRT_NULL"]);
+    expect([...still]).toEqual(["PRRT_1", "PRRT_NULL"]);
     expect(mockGraphql).toHaveBeenCalledTimes(1);
     expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), {
-      ids: ["PRRT_1", "PRRT_2", "PRRT_GONE"],
+      ids: ["PRRT_1", "PRRT_2", "PRRT_NULL"],
     });
   });
 
   it("keeps cached thread IDs unresolved under REST when thread resolution status is unavailable", async () => {
     mockReadRestFeedback.mockResolvedValueOnce({
-      threads: [{ id: "rest:thread:1", reviewId: "PRR_1" }],
+      threads: [{ id: "rest-thread-1", reviewId: "PRR_1" }],
       unavailable: [{ field: "reviewThreads.status", reason: "unavailable" }],
     } as never);
 
@@ -62,94 +67,104 @@ describe("checkThreadsStillUnresolved", () => {
     expect([...still]).toEqual(["PRRT_1"]);
   });
 
-  it("returns only still-unresolved threads under CCR REST when status is available", async () => {
+  it("matches resolved CCR REST threads by REST ID and GraphQL alias while preserving unmatched IDs", async () => {
     mockReadRestFeedback.mockResolvedValueOnce({
       threads: [
-        { id: "rest:thread:1", reviewId: "PRR_1", isResolved: false },
-        { id: "rest:thread:2", reviewId: "PRR_1", isResolved: true },
+        { id: "rest-thread-1", reviewId: "PRR_1", isResolved: false },
+        { id: "rest-thread-2", reviewId: "PRR_1", isResolved: true },
+        { id: "rest-thread-3", reviewId: "PRR_1", isResolved: true },
       ],
       unavailable: [],
     } as never);
+    mockResolveRestIdentity
+      .mockResolvedValueOnce({
+        repo: REPO,
+        pr: 42,
+        numericId: "2",
+        kind: "thread",
+        graphqlThreadId: "PRRT_2",
+      })
+      .mockRejectedValueOnce(new Error("no recorded identity"));
 
     const still = await runWithGithubTransport("rest", () =>
-      checkThreadsStillUnresolved(42, REPO, ["rest:thread:1", "rest:thread:2"]),
+      checkThreadsStillUnresolved(42, REPO, [
+        "rest-thread-1",
+        "PRRT_2",
+        "rest-thread-3",
+        "PRRT_UNMATCHED",
+      ]),
     );
-    expect([...still]).toEqual(["rest:thread:1"]);
+    expect([...still]).toEqual(["rest-thread-1", "PRRT_UNMATCHED"]);
   });
 });
+
+function threadsPage(
+  hasNextPage: boolean,
+  endCursor: string | null,
+  nodes: Array<{
+    id: string;
+    isResolved: boolean;
+    comments: { nodes: Array<{ pullRequestReview: { id: string } }> };
+  } | null> = [],
+) {
+  return {
+    data: {
+      repository: {
+        pullRequest: { reviewThreads: { pageInfo: { hasNextPage, endCursor }, nodes } },
+      },
+    },
+  };
+}
 
 describe("findUnresolvedThreadsByReviewId", () => {
   it("paginates GraphQL reviewThreads and collects unresolved thread IDs for requested reviews only", async () => {
     mockGraphql
-      .mockResolvedValueOnce({
-        data: {
-          repository: {
-            pullRequest: {
-              reviewThreads: {
-                pageInfo: { hasNextPage: true, endCursor: "c1" },
-                nodes: [
-                  {
-                    id: "PRRT_1",
-                    isResolved: false,
-                    comments: { nodes: [{ pullRequestReview: { id: "PRR_1" } }] },
-                  },
-                  {
-                    id: "PRRT_resolved",
-                    isResolved: true,
-                    comments: { nodes: [{ pullRequestReview: { id: "PRR_1" } }] },
-                  },
-                  {
-                    id: "PRRT_other",
-                    isResolved: false,
-                    comments: { nodes: [{ pullRequestReview: { id: "PRR_OTHER" } }] },
-                  },
-                ],
-              },
-            },
+      .mockResolvedValueOnce(
+        threadsPage(true, "c1", [
+          {
+            id: "PRRT_1",
+            isResolved: false,
+            comments: { nodes: [{ pullRequestReview: { id: "PRR_1" } }] },
           },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          repository: {
-            pullRequest: {
-              reviewThreads: {
-                pageInfo: { hasNextPage: false, endCursor: null },
-                nodes: [
-                  {
-                    id: "PRRT_2",
-                    isResolved: false,
-                    comments: { nodes: [{ pullRequestReview: { id: "PRR_1" } }] },
-                  },
-                  null,
-                ],
-              },
-            },
+          {
+            id: "PRRT_resolved",
+            isResolved: true,
+            comments: { nodes: [{ pullRequestReview: { id: "PRR_1" } }] },
           },
-        },
-      });
+          {
+            id: "PRRT_other",
+            isResolved: false,
+            comments: { nodes: [{ pullRequestReview: { id: "PRR_OTHER" } }] },
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        threadsPage(false, null, [
+          {
+            id: "PRRT_2",
+            isResolved: false,
+            comments: { nodes: [{ pullRequestReview: { id: "PRR_1" } }] },
+          },
+          null,
+        ]),
+      );
 
     const result = await findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1", "PRR_CLEAN"]);
     expect([...result.entries()]).toEqual([["PRR_1", ["PRRT_1", "PRRT_2"]]]);
     expect(mockGraphql).toHaveBeenCalledTimes(2);
   });
 
-  it("fails closed when GraphQL pagination reports hasNextPage without endCursor", async () => {
-    mockGraphql.mockResolvedValueOnce({
-      data: {
-        repository: {
-          pullRequest: {
-            reviewThreads: {
-              pageInfo: { hasNextPage: true, endCursor: null },
-              nodes: [],
-            },
-          },
-        },
-      },
-    });
-
+  it("fails closed when GraphQL pagination reports hasNextPage without an advancing endCursor", async () => {
+    mockGraphql.mockResolvedValueOnce(threadsPage(true, null));
     await expect(findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1"])).rejects.toThrow(
-      "Review thread pagination returned hasNextPage without endCursor",
+      "Review thread pagination returned hasNextPage without advancing endCursor",
+    );
+
+    mockGraphql
+      .mockResolvedValueOnce(threadsPage(true, "stuck"))
+      .mockResolvedValueOnce(threadsPage(true, "stuck"));
+    await expect(findUnresolvedThreadsByReviewId(42, REPO, ["PRR_1"])).rejects.toThrow(
+      "Review thread pagination returned hasNextPage without advancing endCursor",
     );
   });
 
